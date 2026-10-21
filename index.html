@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1330">
+<title>Escáner de caja</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Figtree:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+:root{--bg:#0d1330;--card:#171e3d;--ink:#eef1fb;--muted:#9aa4c8;--line:#2a3360;--azul:#7d95ff;--azul-ink:#0d1330;--ok:#5fd39a;--ok-soft:#163528;--bad:#ff8193;--bad-soft:#3b1a22;--marker:#fff06a;
+--display:"Bricolage Grotesque",Figtree,system-ui,sans-serif;--body:Figtree,system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 var(--body);
+  padding:env(safe-area-inset-top,0px) max(16px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(16px,env(safe-area-inset-left,0px))}
+.app{max-width:480px;margin:0 auto;padding-block:14px;display:flex;flex-direction:column;gap:12px;min-height:100%}
+header{display:flex;align-items:center;gap:10px}
+.logo{width:36px;height:36px;border-radius:10px;background:var(--azul);color:var(--azul-ink);display:grid;place-items:center;font:800 18px var(--display);flex:none}
+header h1{margin:0;font:800 18px var(--display);line-height:1.1}
+header p{margin:0;color:var(--muted);font-size:12.5px}
+.estado{margin-left:auto;font:600 12px var(--body);padding:5px 10px;border-radius:999px;background:var(--card);color:var(--muted);white-space:nowrap}
+.estado.ok{color:var(--ok);background:var(--ok-soft)}.estado.bad{color:var(--bad);background:var(--bad-soft)}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--card);border-radius:12px;padding:3px;gap:3px}
+.seg button{border:0;background:transparent;color:var(--muted);font:600 14px var(--body);padding:10px;border-radius:9px;cursor:pointer}
+.seg button.on{background:var(--azul);color:var(--azul-ink)}
+.cam{position:relative;border-radius:18px;overflow:hidden;background:#000;aspect-ratio:4/3;max-width:100%}
+#reader{width:100%;height:100%}
+#reader video{object-fit:cover}
+.camoff{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:20px;color:var(--muted);gap:10px;align-content:center}
+.flash{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .35s}
+.flash.ok{background:rgba(95,211,154,.45);opacity:1;transition:none}
+.flash.bad{background:rgba(255,129,147,.45);opacity:1;transition:none}
+.res{border-radius:16px;padding:14px 16px;background:var(--card);min-height:84px;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.res .p{font:800 32px var(--display);line-height:1.1;font-variant-numeric:tabular-nums}
+.res .n{font-weight:700;font-size:16px}
+.res .m{font:12.5px var(--mono);color:var(--muted)}
+.res.ok{box-shadow:inset 0 0 0 2px var(--ok)}.res.bad{box-shadow:inset 0 0 0 2px var(--bad)}
+.manual{display:flex;gap:8px}
+input{font:inherit;color:var(--ink);background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:12px;width:100%;min-width:0}
+input:focus{outline:none;border-color:var(--azul)}
+.btn{border:0;border-radius:12px;padding:12px 16px;font:700 15px var(--body);cursor:pointer;background:var(--azul);color:var(--azul-ink);white-space:nowrap}
+.btn.ghost{background:var(--card);color:var(--ink)}
+.btn:focus-visible,.seg button:focus-visible{outline:2px solid var(--marker);outline-offset:2px}
+.hist{display:flex;flex-direction:column;gap:1px;border-radius:14px;overflow:hidden}
+.hist div{display:flex;justify-content:space-between;gap:10px;background:var(--card);padding:9px 12px;font-size:13.5px}
+.hist span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist b{font-family:var(--mono);font-weight:500;white-space:nowrap}
+.hist .x{color:var(--bad)}
+.label{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.cfg{display:flex;flex-direction:column;gap:10px;background:var(--card);border-radius:16px;padding:16px}
+.cfg h2{margin:0;font:800 20px var(--display)}
+.cfg p{margin:0;color:var(--muted);font-size:14px}
+.foot{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:12.5px;margin-top:auto}
+.foot button{background:none;border:0;color:var(--muted);text-decoration:underline;font:inherit;cursor:pointer;padding:4px}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){.flash{transition:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo" id="logo">C</div>
+    <div><h1 id="titulo">Escáner de caja</h1><p id="sub">Lectora inalámbrica</p></div>
+    <span class="estado" id="estado">Sin conectar</span>
+  </header>
+
+  <!-- Configuración (si no vino desde el QR de la caja) -->
+  <section class="cfg" id="cfg" hidden>
+    <h2>Conectar con la caja</h2>
+    <p>Lo más fácil: en la caja de la PC tocá <b>Vincular celular</b> y escaneá el código con la cámara. O completá los datos a mano:</p>
+    <label class="label" for="cApi">Dirección de la caja</label>
+    <input id="cApi" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off">
+    <label class="label" for="cPin">PIN</label>
+    <input id="cPin" inputmode="numeric" autocomplete="off">
+    <button class="btn" id="cGuardar">Conectar</button>
+    <p id="cErr" style="color:var(--bad)" hidden></p>
+  </section>
+
+  <!-- Escáner -->
+  <section id="main" hidden style="display:flex;flex-direction:column;gap:12px">
+    <div class="seg" role="group" aria-label="Modo">
+      <button id="mSumar" class="on">Sumar a la venta</button>
+      <button id="mConsulta">Consultar precio</button>
+    </div>
+    <div class="cam">
+      <div id="reader"></div>
+      <div class="camoff" id="camoff">
+        <div>Tocá para encender la cámara</div>
+        <button class="btn" id="encender">Encender cámara</button>
+      </div>
+      <div class="flash" id="flash"></div>
+    </div>
+    <div class="res" id="res"><span class="m">Apuntá al código de barras o QR del producto</span></div>
+    <div class="manual">
+      <input id="manual" inputmode="numeric" placeholder="O escribí el código" autocomplete="off">
+      <button class="btn ghost" id="enviarManual">Enviar</button>
+    </div>
+    <div class="label">Últimos escaneos</div>
+    <div class="hist" id="hist"></div>
+  </section>
+
+  <div class="foot"><span id="cajaInfo"></span><button id="desvincular" hidden>Desvincular</button></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const ars=n=>'$'+Math.round(n).toLocaleString('es-AR');
+let cfg={api:'',pin:'',caja:'1',nombre:''},modo='scan',scanner=null,ctx=null,ultimo={c:'',t:0},bloqueo=0,wake=null;
+
+/* ---------- Configuración ---------- */
+function guardar(){try{localStorage.setItem('escanerCfg',JSON.stringify(cfg))}catch(_){}}
+function leer(){try{return JSON.parse(localStorage.getItem('escanerCfg')||'null')}catch(_){return null}}
+(function(){
+  const u=new URLSearchParams(location.search);
+  if(u.get('api')&&u.get('pin')){cfg={api:u.get('api'),pin:u.get('pin'),caja:u.get('caja')||'1',nombre:u.get('n')||''};guardar();
+    history.replaceState(null,'',location.pathname)} // saca el PIN de la barra de direcciones
+  else{const g=leer();if(g)cfg=g}
+  if(cfg.api&&cfg.pin)conectar();else mostrarCfg();
+})();
+function mostrarCfg(){$('#cfg').hidden=false;$('#main').hidden=true;$('#desvincular').hidden=true;$('#cApi').value=cfg.api||'';$('#cPin').value=''}
+$('#cGuardar').onclick=()=>{cfg.api=$('#cApi').value.trim();cfg.pin=$('#cPin').value.trim();cfg.caja='1';if(!cfg.api||!cfg.pin){mostrarErrCfg('Completá la dirección y el PIN.');return}conectar(true)};
+function mostrarErrCfg(t){$('#cErr').textContent=t;$('#cErr').hidden=false}
+async function llamar(params){
+  const q=new URLSearchParams(Object.assign({pin:cfg.pin,caja:cfg.caja},params));
+  const r=await fetch(cfg.api+(cfg.api.includes('?')?'&':'?')+q.toString());
+  if(!r.ok)throw new Error('La caja respondió con error '+r.status);
+  return r.json();
+}
+async function conectar(desdeForm){
+  setEstado('Conectando…','');
+  try{const d=await llamar({accion:'ping'});
+    if(!d.ok){setEstado('PIN incorrecto','bad');if(desdeForm)mostrarErrCfg('El PIN no coincide con el de la caja.');else mostrarCfg();return}
+    cfg.nombre=d.comercio||cfg.nombre;guardar();
+    $('#titulo').textContent=cfg.nombre;$('#logo').textContent=(cfg.nombre.replace(/^librer[ií]a\s+/i,'')[0]||'C').toUpperCase();
+    $('#sub').textContent='Lectora inalámbrica · caja '+cfg.caja;
+    $('#cfg').hidden=true;$('#main').hidden=false;$('#desvincular').hidden=false;$('#cajaInfo').textContent='Conectado a '+cfg.nombre;
+    setEstado('Conectado','ok');
+  }catch(e){setEstado('Sin conexión','bad');if(desdeForm)mostrarErrCfg('No pude llegar a la caja. Revisá la dirección y que la app esté publicada para cualquier usuario.');else{$('#main').hidden=false;$('#desvincular').hidden=false}}
+}
+$('#desvincular').onclick=()=>{try{localStorage.removeItem('escanerCfg')}catch(_){}cfg={api:'',pin:'',caja:'1',nombre:''};detener();mostrarCfg();setEstado('Sin conectar','')};
+function setEstado(t,c){const e=$('#estado');e.textContent=t;e.className='estado '+(c||'')}
+
+/* ---------- Cámara ---------- */
+$('#encender').onclick=encender;
+async function encender(){
+  try{ctx=ctx||new (window.AudioContext||window.webkitAudioContext)()}catch(_){}
+  try{wake=await navigator.wakeLock.request('screen')}catch(_){}
+  const F=Html5QrcodeSupportedFormats;
+  scanner=new Html5Qrcode('reader',{verbose:false,
+    formatsToSupport:[F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E,F.CODE_128,F.CODE_39,F.ITF,F.QR_CODE],
+    experimentalFeatures:{useBarCodeDetectorIfSupported:true}});
+  try{
+    await scanner.start({facingMode:'environment'},
+      {fps:12,qrbox:(w,h)=>({width:Math.floor(Math.min(w*.85,340)),height:Math.floor(Math.min(h*.45,180))})},
+      leido,()=>{});
+    $('#camoff').hidden=true;
+  }catch(e){
+    $('#camoff').innerHTML='<div>No pude abrir la cámara. Revisá el permiso de cámara del navegador para esta página.</div><button class="btn" id="reintentar">Reintentar</button>';
+    $('#reintentar').onclick=()=>{location.reload()};
+  }
+}
+function detener(){try{scanner&&scanner.stop()}catch(_){}scanner=null;$('#camoff').hidden=false}
+document.addEventListener('visibilitychange',async()=>{if(!document.hidden&&scanner){try{wake=await navigator.wakeLock.request('screen')}catch(_){}}});
+
+/* ---------- Lectura y envío ---------- */
+function leido(codigo){
+  const ahora=Date.now();
+  if(ahora<bloqueo)return;                                  // pausa corta entre lecturas
+  if(codigo===ultimo.c&&ahora-ultimo.t<2500)return;         // evita leer el mismo código dos veces
+  ultimo={c:codigo,t:ahora};bloqueo=ahora+700;
+  enviar(codigo);
+}
+$('#enviarManual').onclick=()=>{const c=$('#manual').value.trim();if(c){enviar(c);$('#manual').value=''}};
+$('#manual').addEventListener('keydown',e=>{if(e.key==='Enter')$('#enviarManual').click()});
+$('#mSumar').onclick=()=>setModo('scan');$('#mConsulta').onclick=()=>setModo('consulta');
+function setModo(m){modo=m;$('#mSumar').classList.toggle('on',m==='scan');$('#mConsulta').classList.toggle('on',m==='consulta')}
+
+async function enviar(codigo){
+  const fila=agregarHist(codigo);
+  try{
+    const d=await llamar({accion:modo,codigo:codigo});
+    if(d.ok){
+      mostrarRes(true,`<span class="m">${d.codigo}${d.enviado?' · enviado a la caja':' · solo consulta'}</span><span class="p">${ars(d.precio)}</span><span class="n">${d.nombre}</span>`);
+      fila.innerHTML=`<span>${d.nombre}</span><b>${d.enviado?'+1 ':''}${ars(d.precio)}</b>`;
+      sonar(true);
+    }else{
+      mostrarRes(false,`<span class="m">${codigo}</span><span class="n">${d.error||'No se pudo enviar'}</span>`);
+      fila.innerHTML=`<span class="x">${codigo} · ${d.error||'error'}</span><b></b>`;
+      sonar(false);
+    }
+    setEstado('Conectado','ok');
+  }catch(e){
+    mostrarRes(false,'<span class="n">Sin conexión con la caja</span><span class="m">Revisá el wifi o los datos y volvé a escanear.</span>');
+    fila.innerHTML=`<span class="x">${codigo} · sin conexión</span><b></b>`;
+    setEstado('Sin conexión','bad');sonar(false);
+  }
+}
+function mostrarRes(ok,html){const r=$('#res');r.className='res '+(ok?'ok':'bad');r.innerHTML=html;
+  const f=$('#flash');f.className='flash '+(ok?'ok':'bad');requestAnimationFrame(()=>requestAnimationFrame(()=>f.className='flash'))}
+function agregarHist(codigo){const h=$('#hist'),d=document.createElement('div');d.innerHTML=`<span>${codigo} · enviando…</span><b></b>`;h.prepend(d);while(h.children.length>8)h.lastChild.remove();return d}
+function sonar(ok){
+  try{navigator.vibrate&&navigator.vibrate(ok?60:[80,60,80])}catch(_){}
+  try{if(!ctx)return;const t=ctx.currentTime;[0,ok?null:.14].forEach(d=>{if(d===null)return;const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=ok?1300:330;g.gain.value=.12;o.connect(g);g.connect(ctx.destination);o.start(t+d);o.stop(t+d+(ok?.08:.12))})}catch(_){}
+}
+</script>
+</body>
+</html>
