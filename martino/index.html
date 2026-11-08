@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caja · Librería Martino</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Figtree:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<script>
+/* Reemplazo de google.script.run: la página vive en GitHub Pages y llama al Apps Script por POST. */
+(function(){
+  var API='https:'+String.fromCharCode(47,47)+'script.google.com/macros/s/AKfycbxMUa8DI3JBsF50fiGoWdM683ZdMCM2w0Q8mBWf0mcP3VnMVAFlbCGkhL0r2sckxu5Xyw/exec';
+  function runner(ok,fail){
+    return new Proxy({},{get:function(_,name){
+      if(name==='withSuccessHandler')return function(f){return runner(f,fail)};
+      if(name==='withFailureHandler')return function(f){return runner(ok,f)};
+      if(name==='withUserObject')return function(){return runner(ok,fail)};
+      return function(){var args=[].slice.call(arguments);
+        fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({fn:name,args:args})})
+          .then(function(r){return r.json()})
+          .then(function(d){if(d.ok){ok&&ok(d.r)}else{fail&&fail(new Error(d.e))}})
+          .catch(function(e){fail&&fail(new Error('Sin conexión con el servidor. Probá de nuevo.'))});
+      }}});
+  }
+  window.google={script:{run:runner(null,null)}};
+})();
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{--paper:#f3f5f9;--card:#fff;--ink:#18213a;--muted:#5d6782;--line:#e2e7f0;--azul:#2140c4;--azul-soft:#e6ebfb;--marker:#fff06a;--ok:#137a4a;--ok-soft:#e1f4ea;--bad:#b42335;--bad-soft:#fbe4e7;
+--display:"Bricolage Grotesque",Figtree,system-ui,sans-serif;--body:Figtree,system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.45 var(--body);color:var(--ink);background:var(--paper)}
+.wrap{max-width:1100px;margin:0 auto;padding:16px;display:grid;grid-template-columns:1fr 380px;gap:16px}
+@media(max-width:860px){.wrap{grid-template-columns:1fr}}
+header{grid-column:1/-1;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.logo{width:42px;height:42px;border-radius:12px;background:var(--azul);color:#fff;display:grid;place-items:center;font:800 20px var(--display)}
+header h1{margin:0;font:800 22px var(--display)}
+header p{margin:0;color:var(--muted);font-size:13px}
+.right{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.day{font:600 13px var(--mono);background:var(--azul-soft);color:var(--azul);padding:7px 11px;border-radius:999px}
+.cel{font:600 13px var(--body);border:1.5px solid var(--line);background:#fff;color:var(--muted);padding:6px 11px;border-radius:999px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.cel i{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block}
+.cel.on{border-color:var(--ok);color:var(--ok)}.cel.on i{background:var(--ok)}
+.cel.flash{background:var(--ok-soft)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.label{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+input{font:inherit;color:var(--ink);border:1.5px solid var(--line);border-radius:12px;padding:13px;width:100%;background:#fff}
+input:focus{outline:none;border-color:var(--azul);box-shadow:0 0 0 3px var(--azul-soft)}
+#scan{font:600 18px var(--mono)}
+.seg{display:inline-grid;grid-template-columns:1fr 1fr;background:var(--paper);border-radius:12px;padding:3px;gap:3px}
+.seg button,.chip,.btn{font:inherit;cursor:pointer;border:0}
+.seg button{background:transparent;padding:8px 14px;border-radius:9px;font-weight:600;color:var(--muted)}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.results{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.results button{all:unset;cursor:pointer;display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border-top:1px solid var(--line);width:calc(100% - 24px)}
+.results button:first-child{border-top:0}
+.results button:hover{background:var(--azul-soft)}
+table{width:100%;border-collapse:collapse}
+td{padding:9px 4px;border-top:1px solid var(--line);vertical-align:middle}
+tr.nuevo td{animation:nuevo 1.2s ease-out}
+@keyframes nuevo{from{background:var(--marker)}to{background:transparent}}
+td.n{font-family:var(--mono);text-align:right;white-space:nowrap}
+.qty{display:inline-flex;align-items:center;gap:2px;background:var(--paper);border-radius:9px}
+.qty button{border:0;background:none;width:28px;height:28px;font:700 16px var(--body);color:var(--azul);cursor:pointer}
+.empty{color:var(--muted);text-align:center;padding:30px 0}
+.total{display:flex;justify-content:space-between;align-items:baseline}
+.big{font:800 40px var(--display);background:linear-gradient(transparent 58%,var(--marker) 58%,var(--marker) 92%,transparent 92%);padding:0 4px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1.5px solid var(--line);background:#fff;padding:8px 12px;border-radius:999px;font-weight:600}
+.chip.on{border-color:var(--azul);background:var(--azul-soft);color:var(--azul)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.vuelto{background:var(--ok-soft);color:var(--ok);border-radius:12px;padding:8px 12px}
+.vuelto b{display:block;font:700 20px var(--mono)}
+.fact{display:flex;align-items:center;gap:10px;border:1.5px dashed var(--azul);border-radius:12px;padding:10px 12px;cursor:pointer}
+.fact input{width:20px;height:20px;accent-color:var(--azul)}
+.fact small{display:block;color:var(--muted)}
+.btn{background:var(--azul);color:#fff;border-radius:14px;padding:16px;font-weight:700;font-size:17px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.ghost{background:var(--azul-soft);color:var(--azul);padding:10px 14px;font-size:14px}
+.lookup{background:var(--azul);color:#fff;border-radius:18px;padding:22px}
+.lookup .p{font:800 54px var(--display);line-height:1.05}
+.lookup .n{font-size:20px;font-weight:700}
+.lookup .m{font:13px var(--mono);opacity:.85}
+.err{background:var(--bad-soft);color:var(--bad);border-radius:12px;padding:10px 12px;font-weight:600}
+.modal{position:fixed;inset:0;background:rgba(10,15,30,.55);display:grid;place-items:center;padding:16px;z-index:10}
+.box{background:#fff;border-radius:18px;padding:22px;width:360px;max-width:100%;display:flex;flex-direction:column;gap:12px}
+.box h2{margin:0;font:800 20px var(--display)}
+.box p{margin:0;color:var(--muted);font-size:14px}
+#pinInput{font:700 26px var(--mono);text-align:center;letter-spacing:.3em}
+#qrCel{display:flex;justify-content:center;padding:8px;background:#fff}
+.tk{background:#fff;color:#000;width:300px;max-width:100%;padding:16px 14px;font:12.5px/1.4 var(--mono);border-radius:6px}
+.tk h2{font:800 16px var(--display);text-align:center;margin:0}
+.tk .c{text-align:center}
+.tk hr{border:0;border-top:1px dashed #000;margin:8px 0}
+.tk .r{display:flex;justify-content:space-between;gap:8px}
+.tk .tot{font-size:16px;font-weight:700}
+.tk .demo{border:1.5px solid #000;padding:4px;text-align:center;font-weight:700;margin-top:8px}
+#qr{display:flex;justify-content:center;margin-top:8px}
+.acts{display:flex;gap:8px;margin-top:12px}
+.acts .btn{flex:1;padding:12px;font-size:15px}
+.hbtn{font:600 13px var(--body);border:1.5px solid var(--line);background:#fff;color:var(--ink);padding:6px 11px;border-radius:999px;cursor:pointer}
+.hbtn:hover{border-color:var(--azul);color:var(--azul)}
+.box.wide{width:520px;max-height:calc(100vh - 32px);overflow-y:auto}
+.vlist{display:flex;flex-direction:column;gap:8px}
+.venta{border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.venta.anulada{opacity:.6}
+.venta .top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.venta .top b{font-family:var(--mono)}
+.venta small{color:var(--muted)}
+.venta ul{margin:0;padding-left:18px;color:var(--muted);font-size:13px}
+.pill{font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--azul-soft);color:var(--azul)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.btn.danger{background:var(--bad);color:#fff;padding:9px 12px;font-size:14px}
+.btn.small{padding:7px 11px;font-size:13px}
+.anular{display:flex;gap:6px;flex-wrap:wrap}
+.anular input{flex:1;min-width:160px;padding:9px 11px}
+.crow{display:flex;justify-content:space-between;padding:7px 0;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
+.crow:first-child{border-top:0}
+.crow b{font-family:var(--mono)}
+.crow.tot{font-size:17px;font-weight:700;border-top:2px solid var(--ink)}
+.dif{border-radius:12px;padding:10px 12px;font-weight:700;display:flex;justify-content:space-between}
+.dif.ok{background:var(--ok-soft);color:var(--ok)}.dif.bad{background:var(--bad-soft);color:var(--bad)}.dif.neutral{background:var(--paper);color:var(--muted)}
+select{font:inherit;color:var(--ink);border:1.5px solid var(--line);border-radius:12px;padding:12px;width:100%;background:#fff}
+select:focus{outline:none;border-color:var(--azul);box-shadow:0 0 0 3px var(--azul-soft)}
+.box .row2 input,.box .row2 select{margin-top:6px}
+.hint{font-size:12.5px;color:var(--muted)}
+.codigo{font:700 16px var(--mono)}
+.nuevoTag{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--marker);color:var(--ink)}
+.fiado{display:flex;flex-direction:column;gap:8px;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px}
+.fiado .sel{display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--azul-soft);color:var(--azul);border-radius:10px;padding:9px 11px;font-weight:700}
+.fiado .sel small{display:block;font-weight:600;color:var(--muted)}
+.fiado .sel button{border:0;background:none;color:var(--azul);font:600 13px var(--body);cursor:pointer;text-decoration:underline}
+.clist{border:1px solid var(--line);border-radius:10px;max-height:180px;overflow-y:auto}
+.clist button{all:unset;box-sizing:border-box;cursor:pointer;display:flex;justify-content:space-between;gap:8px;padding:9px 11px;border-top:1px solid var(--line);width:100%}
+.clist button:first-child{border-top:0}
+.clist button:hover{background:var(--azul-soft)}
+.clist small{color:var(--muted);font-family:var(--mono)}
+.clist .add{color:var(--azul);font-weight:700}
+.nc{display:flex;flex-direction:column;gap:8px}
+.nc .row2 input{margin-top:0}
+.fiado input{padding:10px 11px}
+[hidden]{display:none!important}
+.box.xwide{width:980px;max-height:calc(100vh - 32px);overflow-y:auto}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bar input,.bar select{width:auto;flex:1;min-width:140px;padding:10px 11px}
+.bar label{display:flex;align-items:center;gap:6px;font-weight:600;font-size:14px;white-space:nowrap}
+.bulk{background:var(--paper);border-radius:12px;padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px}
+.bulk input{width:80px;padding:8px 10px}
+.bulk select{width:auto;padding:8px 10px}
+.ptab td{padding:5px 4px;font-size:14px}
+.ptab th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:6px 4px;position:sticky;top:0;background:#fff}
+.ptab input{padding:7px 8px;font:500 14px var(--mono);text-align:right;width:100%}
+.ptab .w1{width:105px}.ptab .w2{width:80px}
+.ptab tr.mod td{background:#fffbd6}
+.ptab tr.cero .pr{border-color:var(--bad)}
+.ptab small{color:var(--muted)}
+.sub{color:var(--muted);font-size:13px}
+.mov{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
+.mov b{font-family:var(--mono);white-space:nowrap}.mov.pago b{color:var(--ok)}
+.deuda{font:800 30px var(--display)}
+.rrow{display:flex;border-top:1px solid var(--line)}.rrow:first-child{border-top:0}
+.results .rrow button[data-c]{flex:1;border-top:0}
+.results .rrow .bar{width:auto;padding:10px 12px;color:var(--azul);font-weight:700;font-size:13px;border-top:0;white-space:nowrap}
+.asig{border:1.5px dashed var(--azul);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+@page{size:80mm auto;margin:0}
+#imp{display:none}
+@media print{html,body{background:#fff!important;margin:0;padding:0;height:auto}body.imp>*:not(#imp){display:none!important}#imp{display:block;width:72mm;padding:0 2mm 4mm;font-size:12px;border-radius:0;color:#000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}#imp *{color:#000!important}#imp h2{font-size:17px}#imp .tot{font-size:16px}}
+.pedit{background:none;border:0;font:inherit;color:inherit;cursor:pointer;text-align:right;padding:2px 4px;border-radius:6px}.pedit:hover{background:#0001}.pedit small{display:block;font-size:11px;opacity:.7}
+.results button[data-c] span{flex:1;align-self:center}.results button[data-c] b{align-self:center}
+.thumb{width:40px;height:40px;object-fit:contain;border-radius:8px;background:#fff;flex:none;margin-right:10px;display:inline-block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">M</div>
+    <div><h1 id="comercio">Caja</h1><p id="direccion">Cargando productos…</p></div>
+    <div class="right">
+      <button class="hbtn" id="btnPrecios">Precios</button>
+      <button class="hbtn" id="btnClientes">Clientes</button>
+      <button class="hbtn" id="btnProducto">+ Producto</button>
+      <button class="hbtn" id="btnVentas">Ventas de hoy</button>
+      <button class="hbtn" id="btnCierre">Cerrar caja</button>
+      <button class="cel" id="celChip" title="Vincular un celular como lectora"><i></i><span id="celTxt">Vincular celular</span></button>
+      <span class="day" id="day">Hoy $0</span>
+    </div>
+  </header>
+
+  <section class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <div class="seg"><button id="mCobrar" class="on">Cobrar</button><button id="mConsulta">Consultar precio</button></div>
+      <button class="btn ghost" id="recargar">Actualizar precios</button>
+    </div>
+    <div>
+      <label class="label" for="scan">Escaneá o escribí el código o el nombre</label>
+      <input id="scan" autocomplete="off" placeholder="779…" style="margin-top:6px">
+    </div>
+    <div class="results" id="results" hidden></div>
+    <div id="error" class="err" hidden></div>
+    <div id="paneTicket"><table><tbody id="lineas"></tbody></table></div>
+    <div id="paneConsulta" hidden><div class="lookup" id="lookup"><span class="m">Escaneá un artículo</span><div class="p">$ —</div></div></div>
+  </section>
+
+  <aside class="panel" id="cobro">
+    <div class="total"><span class="label">Total</span><span class="big" id="total">$0</span></div>
+    <div id="ajusteInfo" hidden style="font-size:13px;color:var(--muted);text-align:right;margin-top:-4px"></div>
+    <div><span class="label">Medio de pago</span><div class="chips" id="medios" style="margin-top:6px"></div></div>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:14px">
+      <span class="label" style="margin:0">Extra</span>
+      <select id="extraTipo" style="padding:6px;width:auto"><option value="-1">Descuento</option><option value="1">Recargo</option></select>
+      <input id="extraPct" inputmode="numeric" placeholder="0" style="width:60px;padding:6px;text-align:right"> %
+      <span class="chips" id="extraRap"><button class="chip" data-x="5">5</button><button class="chip" data-x="10">10</button><button class="chip" data-x="15">15</button><button class="chip" data-x="0">✕</button></span>
+    </div>
+    <div class="row2" id="efectivo">
+      <div><label class="label" for="paga">Paga con</label><input id="paga" inputmode="numeric" placeholder="$" style="margin-top:6px"></div>
+      <div class="vuelto"><span class="label" style="color:inherit">Vuelto</span><b id="vuelto">$0</b></div>
+    </div>
+    <div class="fiado" id="fiadoBox" hidden>
+      <span class="label">¿A quién se le fía?</span>
+      <div class="sel" id="cliSel" hidden><span><span id="cliNombre"></span><small id="cliDeuda"></small></span><button id="cliCambiar" type="button">Cambiar</button></div>
+      <div id="cliBuscar">
+        <input id="cliQ" autocomplete="off" placeholder="Buscá el cliente por nombre">
+        <div class="clist" id="cliList" style="margin-top:6px"></div>
+      </div>
+      <div class="nc" id="cliNuevo" hidden>
+        <input id="ncNombre" placeholder="Nombre y apellido" autocomplete="off">
+        <input id="ncTel" placeholder="Teléfono (opcional)" inputmode="tel" autocomplete="off">
+        <div class="row2"><button class="btn ghost small" id="ncCancelar" type="button">Cancelar</button><button class="btn small" id="ncGuardar" type="button">Guardar cliente</button></div>
+      </div>
+    </div>
+    <label class="fact" id="factBox" hidden>
+      <input type="checkbox" id="facturar">
+      <span><b id="factTit">Emitir Factura C</b><small id="factSub">Factura electrónica con CAE de ARCA</small></span>
+    </label>
+    <div id="editBox" hidden style="background:#fff4d6;color:#7a5200;border-radius:10px;padding:8px 10px;margin-bottom:8px;font-size:13px">Editando una venta de hoy: al cobrar, la original queda anulada. <button class="btn ghost small" id="editCancelar" type="button">Cancelar edición</button></div>
+    <button class="btn" id="cobrar" disabled>Cobrar</button>
+    <label style="display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted);margin-top:8px;cursor:pointer"><input type="checkbox" id="autoImp" style="width:auto;flex:none"> Imprimir ticket automáticamente en esta PC</label>
+  </aside>
+</div>
+
+<!-- PIN de la caja -->
+<div class="modal" id="pinModal" hidden>
+  <form class="box" id="pinForm">
+    <h2>Abrir caja</h2>
+    <p>Ingresá el PIN de la caja.</p>
+    <input id="pinInput" inputmode="numeric" autocomplete="off" maxlength="8">
+    <div id="pinErr" class="err" hidden>PIN incorrecto. Probá de nuevo.</div>
+    <button class="btn" type="submit">Entrar</button>
+  </form>
+</div>
+
+<!-- Vincular celular -->
+<div class="modal" id="celModal" hidden>
+  <div class="box">
+    <h2>Usar el celular como lectora</h2>
+    <p id="celInstr">Escaneá este código con la cámara del celular. Se abre el escáner ya conectado a esta caja.</p>
+    <div id="qrCel"></div>
+    <p id="celNota" style="font-size:12.5px"></p>
+    <button class="btn ghost" id="celCerrar">Listo</button>
+  </div>
+</div>
+
+<!-- Ventas de hoy -->
+<div class="modal" id="ventasModal" hidden>
+  <div class="box wide">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2>Ventas de hoy</h2><button class="btn ghost small" id="ventasCerrar">Cerrar</button></div>
+    <p>Si se cobró mal, anulá la venta y volvé a cobrarla bien. Los artículos vuelven al stock.</p>
+    <div class="vlist" id="vlist"><div class="empty">Cargando…</div></div>
+  </div>
+</div>
+
+<!-- Cierre de caja -->
+<div class="modal" id="cierreModal" hidden>
+  <div class="box wide">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2>Cerrar caja</h2><button class="btn ghost small" id="cierreCancelar">Cancelar</button></div>
+    <p id="cierreDesde">Calculando…</p>
+    <div id="cierreTabla"></div>
+    <div><label class="label" for="contado">Efectivo contado en la caja</label><input id="contado" inputmode="numeric" placeholder="$" style="margin-top:6px"></div>
+    <div class="dif neutral" id="dif"><span>Diferencia</span><span>—</span></div>
+    <div><label class="label" for="cierreNota">Nota (opcional)</label><input id="cierreNota" placeholder="Ej: se pagó al proveedor de golosinas con efectivo" style="margin-top:6px"></div>
+    <button class="btn" id="cierreOk" disabled>Confirmar cierre</button>
+  </div>
+</div>
+
+<!-- Producto nuevo -->
+<div class="modal" id="prodModal" hidden>
+  <form class="box wide" id="prodForm" autocomplete="off">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2>Producto nuevo</h2><span class="nuevoTag" id="prodTag" hidden>Código sin cargar</span></div>
+    <div class="asig" id="asigBox" hidden>
+      <b>¿Es un producto que ya está cargado?</b>
+      <span class="hint">Buscalo y tocá su nombre: le asigno este código de barras y ya queda para la próxima.</span>
+      <input id="asigQ" autocomplete="off" placeholder="Buscá por nombre (ej: cuaderno rivadavia)">
+      <div class="clist" id="asigList" hidden></div>
+    </div>
+    <p id="prodIntro">Completá los datos y queda guardado en la planilla y en la app.</p>
+    <div><label class="label" for="pCodigo">Código de barras (opcional)</label><input id="pCodigo" class="codigo" inputmode="numeric" placeholder="Escaneá con la lectora o el celu, o dejalo vacío" style="margin-top:6px"></div>
+    <div><label class="label" for="pNombre">Nombre</label><input id="pNombre" placeholder="Ej: Cuaderno Éxito 48 hojas rayado" style="margin-top:6px"></div>
+    <div><label class="label" for="pRapido">Código rápido (opcional)</label><input id="pRapido" placeholder="Ej: C48" maxlength="12" style="margin-top:6px;text-transform:uppercase"></div>
+    <div class="row2">
+      <div><label class="label" for="pCategoria">Categoría</label><select id="pCategoria"></select></div>
+      <div><label class="label" for="pProveedor">Proveedor</label><select id="pProveedor"></select></div>
+      <div><label class="label" for="pMarca">Marca (opcional)</label><input id="pMarca" list="marcasList" autocomplete="off" placeholder="ej: Faber Castell"></div>
+    </div>
+    <div class="row2">
+      <div><label class="label" for="pCosto">Costo (opcional)</label><input id="pCosto" inputmode="numeric" placeholder="$"></div>
+      <div><label class="label" for="pPrecio">Precio de venta</label><input id="pPrecio" inputmode="numeric" placeholder="$"></div>
+    </div>
+    <div class="hint" id="pMargen"></div>
+    <div class="row2">
+      <div><label class="label" for="pStock">Stock que hay hoy</label><input id="pStock" inputmode="numeric" placeholder="0"></div>
+      <div><label class="label" for="pMinimo">Avisar cuando queden</label><input id="pMinimo" inputmode="numeric" placeholder="0"></div>
+    </div>
+    <div id="prodErr" class="err" hidden></div>
+    <div class="row2"><button class="btn ghost" type="button" id="prodCancelar">Cancelar</button><button class="btn" type="submit" id="prodGuardar">Guardar</button></div>
+  </form>
+</div>
+
+<!-- Código de barras -->
+<div class="modal" id="barModal" hidden>
+  <form class="box" id="barForm" autocomplete="off">
+    <h2>Editar producto</h2>
+    <div><label class="label" for="eNombre">Nombre</label><input id="eNombre" style="margin-top:6px"></div>
+    <div class="row2">
+      <div><label class="label" for="eCategoria">Categoría</label><select id="eCategoria"></select></div>
+      <div><label class="label" for="eMarca">Marca</label><input id="eMarca" list="marcasList" placeholder="(opcional)"></div>
+    </div>
+    <div class="row2">
+      <div><label class="label" for="eProveedor">Proveedor</label><select id="eProveedor"></select></div>
+      <div><label class="label" for="eMinimo">Stock mínimo</label><input id="eMinimo" inputmode="numeric"></div>
+    </div>
+    <div class="row2">
+      <div><label class="label" for="eCosto">Costo</label><input id="eCosto" inputmode="numeric" placeholder="$"></div>
+      <div><label class="label" for="ePrecio">Precio de venta</label><input id="ePrecio" inputmode="numeric" placeholder="$"></div>
+    </div>
+    <div class="row2">
+      <div><label class="label" for="barInput">Código de barras</label><input id="barInput" class="codigo" inputmode="numeric" placeholder="Escaneá o escribí"></div>
+      <div><label class="label" for="barRapido">Código rápido</label><input id="barRapido" class="codigo" placeholder="Ej: C48" maxlength="12" style="text-transform:uppercase"></div>
+    </div>
+    <div id="barErr" class="err" hidden></div>
+    <div class="row2"><button class="btn ghost" type="button" id="barCancelar">Cancelar</button><button class="btn" type="submit" id="barGuardar">Guardar</button></div>
+    <button class="btn ghost small" type="button" id="barBorrar" style="color:var(--bad)">Borrar producto</button>
+  </form>
+</div>
+
+<!-- Producto sin precio -->
+<div class="modal" id="spModal" hidden>
+  <form class="box" id="spForm" autocomplete="off">
+    <h2>Sin precio de venta</h2>
+    <p id="spNombre"></p>
+    <div class="hint" id="spCosto"></div>
+    <div><label class="label" for="spPrecio">Precio de venta</label><input id="spPrecio" inputmode="numeric" placeholder="$" style="margin-top:6px;font:700 22px var(--mono)"></div>
+    <div class="row2"><button class="btn ghost" type="button" id="spCancelar">Cancelar</button><button class="btn" type="submit" id="spGuardar">Guardar y agregar</button></div>
+  </form>
+</div>
+
+<!-- Precios -->
+<div class="modal" id="precModal" hidden>
+  <div class="box xwide">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2>Precios</h2>
+      <span style="display:flex;gap:8px"><button class="btn ghost small" id="precCerrar">Cerrar</button><button class="btn small" id="precGuardar" disabled>Guardar cambios</button></span></div>
+    <div class="bar">
+      <input id="precQ" autocomplete="off" placeholder="Buscá o escaneá un producto">
+      <select id="precCat"></select><select id="precMarca"></select><select id="precProv"></select>
+      <label><input type="checkbox" id="precSin" style="width:18px;height:18px"> Solo sin precio</label>
+    </div>
+    <div class="bulk">
+      <span>A los <b id="precN">0</b> productos <span id="precQue">filtrados</span>:</span>
+      <span>margen <input id="bMargen" inputmode="numeric" placeholder="60">% <button class="btn ghost small" id="bMargenOk">Aplicar</button></span>
+      <span><select id="bDir"><option value="1">aumentar</option><option value="-1">bajar</option></select> <input id="bAum" inputmode="numeric" placeholder="10">% <button class="btn ghost small" id="bAumOk">Aplicar</button></span>
+      <span>marca <input id="bMarca" list="marcasList" placeholder="ej: Faber" style="width:110px"> <button class="btn ghost small" id="bMarcaOk">Asignar</button></span>
+      <datalist id="marcasList"></datalist>
+      <span>redondear a <select id="bRed"><option value="10">$10</option><option value="50">$50</option><option value="100" selected>$100</option></select></span>
+    </div>
+    <div class="sub" id="precInfo">Cambiá el costo, el margen o el precio directo en la tabla. Los cambios quedan en amarillo hasta que tocás "Guardar cambios".</div>
+    <div style="max-height:55vh;overflow-y:auto"><table class="ptab"><thead><tr><th style="width:34px"><input type="checkbox" id="selTodos" title="Seleccionar todos los filtrados" style="width:18px;height:18px"></th><th>Producto</th><th class="w1">Costo</th><th class="w2">Margen %</th><th class="w1">Precio</th></tr></thead><tbody id="precBody"></tbody></table></div>
+  </div>
+</div>
+
+<!-- Clientes -->
+<div class="modal" id="cliModal" hidden>
+  <div class="box wide">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 id="clTit">Clientes</h2><span style="display:flex;gap:8px"><button class="btn ghost small" id="clVolver" hidden>← Volver</button><button class="btn ghost small" id="clCerrar">Cerrar</button></span></div>
+    <div id="clLista">
+      <div class="bar"><input id="clQ" autocomplete="off" placeholder="Buscá un cliente"><button class="btn ghost small" id="clNuevoBtn">+ Cliente nuevo</button></div>
+      <div class="nc" id="clNuevo" hidden style="margin-top:8px">
+        <input id="clnNombre" placeholder="Nombre y apellido" autocomplete="off">
+        <input id="clnTel" placeholder="Teléfono (opcional)" inputmode="tel" autocomplete="off">
+        <div class="row2"><button class="btn ghost small" id="clnCancelar" type="button">Cancelar</button><button class="btn small" id="clnGuardar" type="button">Guardar cliente</button></div>
+      </div>
+      <div class="sub" id="clTotal" style="margin-top:8px"></div>
+      <div class="clist" id="clList" style="max-height:55vh;margin-top:6px"></div>
+    </div>
+    <div id="clDet" hidden style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;justify-content:space-between;align-items:end;gap:10px;flex-wrap:wrap">
+        <div><span class="label">Debe</span><div class="deuda" id="clDeuda">$0</div></div>
+        <a class="btn ghost small" id="clWa" target="_blank" rel="noopener" style="text-decoration:none">Recordar por WhatsApp</a>
+      </div>
+      <div class="bar"><input id="clTel" inputmode="tel" placeholder="Teléfono"><button class="btn ghost small" id="clTelOk">Guardar teléfono</button></div>
+      <div class="fiado">
+        <span class="label">Registrar un pago</span>
+        <div class="bar"><input id="cpImporte" inputmode="numeric" placeholder="$ importe"><input id="cpNota" placeholder="Nota (opcional)"></div>
+        <div class="chips" id="cpMedios"></div>
+        <button class="btn" id="cpOk">Registrar pago</button>
+      </div>
+      <div><span class="label">Movimientos</span><div id="clMovs"><div class="empty">Cargando…</div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Ticket -->
+<div class="modal" id="modal" hidden><div><div class="tk" id="ticket"></div>
+  <div class="acts"><button class="btn ghost" id="imprimir">Imprimir</button><button class="btn" id="nueva">Nueva venta</button></div></div></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const ars=n=>'$'+Math.round(n).toLocaleString('es-AR');
+const MEDIOS=['Efectivo','Transferencia','Débito','QR','Fiado'];
+const CAJA='1';
+let editando=null;
+let productos=[],cfg={},carrito=[],medio='Efectivo',modo='cobrar',ocupado=false,pin='';
+let audio=null,ultimoEscaneo=0,escuchando=false,pollTimer=null;
+let clientes=[],categorias=[],proveedores=[],cliente=null,altas=[];
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sinTildes=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+
+/* ---------- PIN ---------- */
+function guardarPin(p){try{localStorage.setItem('cajaPin',p)}catch(_){}}
+function leerPin(){try{return localStorage.getItem('cajaPin')||''}catch(_){return''}}
+$('#pinForm').addEventListener('submit',e=>{e.preventDefault();const p=$('#pinInput').value.trim();
+  try{audio=audio||new (window.AudioContext||window.webkitAudioContext)()}catch(_){}
+  google.script.run.withSuccessHandler(ok=>{if(!ok){$('#pinErr').hidden=false;return}pin=p;guardarPin(p);$('#pinModal').hidden=true;iniciar()}).verificarPin(p)});
+(function(){const p=leerPin()||'';const pedir=()=>{$('#pinModal').hidden=false;$('#pinInput').focus()};
+  google.script.run.withSuccessHandler(ok=>{if(ok){pin=p;$('#pinModal').hidden=true;iniciar()}else pedir()}).withFailureHandler(pedir).verificarPin(p)})();
+
+function iniciar(){cargar();$('#scan').focus();escuchar()}
+
+/* ---------- Datos ---------- */
+function cargar(cb){google.script.run.withSuccessHandler(d=>{cfg=d.config;productos=d.productos;
+  clientes=d.clientes||[];categorias=d.categorias||[];proveedores=d.proveedores||[];
+  if(cliente)cliente=clientes.find(c=>c.nombre===cliente.nombre)||cliente;
+  $('#comercio').textContent=cfg.comercio;$('#direccion').textContent=cfg.direccion+' · '+productos.length+' artículos';
+  $('#factBox').hidden=cfg.facturacion==='off';$('#factTit').textContent='Emitir Factura '+cfg.tipo;
+  $('#factSub').textContent=cfg.facturacion==='demo'?'Modo demostración: sin validez fiscal':'Factura electrónica con CAE de ARCA';
+  render();resumen();if(cb)cb()}).withFailureHandler(mostrarError).getData()}
+function resumen(){google.script.run.withSuccessHandler(r=>{$('#day').textContent='Hoy '+ars(r.total)+' · '+r.cantidad+' ventas'}).resumenDelDia()}
+function mostrarError(e){const b=$('#error');b.textContent=(e&&e.message)||String(e);b.hidden=false;clearTimeout(b._t);b._t=setTimeout(()=>b.hidden=true,5000)}
+const prod=c=>productos.find(p=>p.codigo===c);
+const porCodigo=c=>{c=String(c||'').trim();const u=c.toUpperCase();return productos.find(p=>p.codigo===c||(p.barras&&p.barras===c)||(p.rapido&&p.rapido===u))};
+function buscar(q){q=q.trim();if(!q)return[];const ex=porCodigo(q);if(ex)return[ex];const l=q.toLowerCase();return productos.filter(p=>p.nombre.toLowerCase().includes(l)).slice(0,8)}
+
+/* ---------- Ticket ---------- */
+let resaltar=null;
+function agregar(p){
+  if(modo==='consulta'){$('#lookup').innerHTML=(p.imagen?`<img src="${esc(p.imagen)}" alt="" style="width:100%;max-height:220px;object-fit:contain;border-radius:12px;background:#fff;margin-bottom:10px">`:'')+`<span class="m">${p.codigo} · ${p.categoria}</span><div class="p">${ars(p.precio)}</div><div class="n">${p.nombre}</div><span class="m">${p.stock>0?p.stock+' en stock'+(p.stock<p.minimo?' · reponer':''):'stock sin contar'}</span><div style="margin-top:12px"><button class="btn ghost small" data-bar="${esc(p.codigo)}">✎ Editar producto${p.barras||p.rapido?' · '+esc([p.barras,p.rapido].filter(Boolean).join(' · ')):''}</button></div>`;return}
+  if(!(p.precio>0)){pedirPrecio(p);return}
+  const it=carrito.find(c=>c.codigo===p.codigo);if(it)it.cantidad++;else carrito.push({codigo:p.codigo,cantidad:1,precio:0});resaltar=p.codigo;render()}
+const pu=c=>c.precio||prod(c.codigo).precio;
+const pctMedio=m=>Number((cfg.ajustes||{})[m]||0);
+const subtotal=()=>carrito.reduce((s,c)=>s+pu(c)*c.cantidad,0);
+const extra=()=>Math.min(100,Number(String($('#extraPct').value).replace(/\D/g,''))||0)*Number($('#extraTipo').value);
+const conMedio=()=>carrito.reduce((s,c)=>s+Math.round(pu(c)*(1+pctMedio(medio)/100))*c.cantidad,0);
+const total=()=>carrito.reduce((s,c)=>s+Math.round(pu(c)*(1+pctMedio(medio)/100)*(1+extra()/100))*c.cantidad,0);
+const etiqPct=p=>p?(p>0?'+':'−')+Math.abs(p)+'%':'';
+function render(){
+  $('#lineas').innerHTML=carrito.length?carrito.map(c=>{const p=prod(c.codigo);return`<tr class="${c.codigo===resaltar?'nuevo':''}"><td>${p.nombre}${p.stock>0&&p.stock-c.cantidad<0?' <small style="color:var(--bad)">sin stock</small>':''}</td><td><span class="qty"><button data-d="-1" data-c="${c.codigo}">−</button>${c.cantidad}<button data-d="1" data-c="${c.codigo}">+</button></span></td><td class="n"><button class="pedit" data-pr="${c.codigo}" title="Cambiar precio solo en esta venta">${ars(pu(c)*c.cantidad)}${c.cantidad>1||c.precio?`<small>${ars(pu(c))} c/u${c.precio?' ✎':''}</small>`:''}</button></td></tr>`}).join(''):'<tr><td class="empty">Escaneá el primer artículo, con la lectora o con el celular</td></tr>';
+  resaltar=null;
+  $('#editBox').hidden=!editando;
+  const t=total(),faltaCli=medio==='Fiado'&&!cliente,pm=pctMedio(medio);
+  const ex=extra(),sb=subtotal(),cm=conMedio(),dif=(a)=>(a<0?'−':'+')+ars(Math.abs(a));
+  $('#ajusteInfo').hidden=!((pm||ex)&&carrito.length);
+  if((pm||ex)&&carrito.length)$('#ajusteInfo').textContent=`Lista ${ars(sb)}`+(pm?` · ${medio} ${etiqPct(pm)}: ${dif(cm-sb)}`:'')+(ex?` · ${ex<0?'Descuento':'Recargo'} ${Math.abs(ex)}%: ${dif(t-cm)}`:'');
+  $('#total').textContent=ars(t);$('#cobrar').disabled=!carrito.length||ocupado||faltaCli;
+  $('#cobrar').textContent=ocupado?'Guardando…':(!carrito.length?'Cobrar':faltaCli?'Elegí el cliente':medio==='Fiado'?'Fiar '+ars(t)+' a '+cliente.nombre.split(' ')[0]:'Cobrar '+ars(t));
+  $('#medios').innerHTML=MEDIOS.map(m=>`<button class="chip ${m===medio?'on':''}" data-m="${m}">${m}${pctMedio(m)?' <small>'+etiqPct(pctMedio(m))+'</small>':''}</button>`).join('');
+  $('#efectivo').hidden=medio!=='Efectivo';$('#fiadoBox').hidden=medio!=='Fiado';vuelto()}
+
+/* ---------- Fiado: cliente ---------- */
+function dibujarCliente(){
+  const hay=!!cliente;$('#cliSel').hidden=!hay;$('#cliBuscar').hidden=hay||!$('#cliNuevo').hidden;
+  if(hay){$('#cliNombre').textContent=cliente.nombre;$('#cliDeuda').textContent=cliente.fiado>0?'Ya debe '+ars(cliente.fiado):'No debe nada'}
+  else listarClientes()}
+function listarClientes(){const q=sinTildes($('#cliQ').value.trim());
+  const l=clientes.filter(c=>!q||sinTildes(c.nombre).includes(q)).slice(0,30);
+  $('#cliList').innerHTML=l.map(c=>`<button type="button" data-cli="${esc(c.nombre)}"><span>${esc(c.nombre)}</span><small>${c.fiado>0?'debe '+ars(c.fiado):''}</small></button>`).join('')+
+    `<button type="button" class="add" data-nuevo="1">+ Cliente nuevo${q?' "'+esc($('#cliQ').value.trim())+'"':''}</button>`}
+$('#cliQ').oninput=listarClientes;
+$('#cliQ').onkeydown=e=>{if(e.key!=='Enter')return;e.preventDefault();const b=$('#cliList button');if(b)b.click()};
+$('#cliList').onclick=e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.nuevo){$('#cliNuevo').hidden=false;$('#cliBuscar').hidden=true;$('#ncNombre').value=$('#cliQ').value.trim();$('#ncTel').value='';$('#ncNombre').focus();return}
+  cliente=clientes.find(c=>c.nombre===b.dataset.cli);$('#cliQ').value='';dibujarCliente();render()};
+$('#cliCambiar').onclick=()=>{cliente=null;dibujarCliente();render();$('#cliQ').focus()};
+$('#ncCancelar').onclick=()=>{$('#cliNuevo').hidden=true;dibujarCliente();$('#cliQ').focus()};
+$('#ncNombre').onkeydown=$('#ncTel').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('#ncGuardar').click()}};
+$('#ncGuardar').onclick=()=>{const b=$('#ncGuardar'),n=$('#ncNombre').value.trim();
+  if(!n){mostrarError('Escribí el nombre del cliente.');$('#ncNombre').focus();return}
+  b.disabled=true;b.textContent='Guardando…';
+  google.script.run.withSuccessHandler(c=>{b.disabled=false;b.textContent='Guardar cliente';clientes.push(c);clientes.sort((a,z)=>a.nombre.localeCompare(z.nombre));
+    cliente=c;$('#cliNuevo').hidden=true;$('#cliQ').value='';dibujarCliente();render()})
+  .withFailureHandler(e=>{b.disabled=false;b.textContent='Guardar cliente';mostrarError(e)})
+  .crearCliente(pin,n,$('#ncTel').value.trim())};
+function vuelto(){const v=(Number($('#paga').value.replace(/\D/g,''))||0)-total();$('#vuelto').textContent=v>0?ars(v):'$0'}
+
+const scan=$('#scan');
+scan.addEventListener('keydown',e=>{if(e.key!=='Enter')return;e.preventDefault();const v=scan.value.trim();if(!v)return;const r=buscar(v);
+  if(r.length){agregar(r[0]);scan.value='';$('#results').hidden=true}
+  else if(/^\d{4,}$/.test(v)){scan.value='';$('#results').hidden=true;pedirAlta(v)}
+  else{scan.value='';$('#results').hidden=true;abrirAlta('',v)}});
+scan.addEventListener('input',()=>{const q=scan.value.trim(),r=buscar(q),box=$('#results');if(q.length<2||/^\d+$/.test(q)){box.hidden=true;return}
+  box.innerHTML=r.map(p=>`<div class="rrow"><button data-c="${esc(p.codigo)}">${p.imagen?`<img class="thumb" src="${esc(p.imagen)}" alt="" loading="lazy">`:'<i class="thumb"></i>'}<span>${esc(p.nombre)}</span><b>${p.precio>0?ars(p.precio):'sin precio'}</b></button><button class="bar" data-bar="${esc(p.codigo)}" title="Editar o borrar el producto">✎ Editar</button></div>`).join('')+`<div class="rrow"><button data-crear="1" style="color:var(--azul);font-weight:700"><span>+ Crear "${esc(q)}"</span><b></b></button></div>`;box.hidden=false});
+$('#results').onclick=e=>{if(e.target.closest('[data-crear]')){const q=scan.value.trim();scan.value='';$('#results').hidden=true;abrirAlta('',q);return}
+  const bb=e.target.closest('[data-bar]');if(bb){editarBarras(prod(bb.dataset.bar));return}
+  const b=e.target.closest('[data-c]');if(!b)return;agregar(prod(b.dataset.c));scan.value='';$('#results').hidden=true;scan.focus()};
+$('#lineas').onclick=e=>{const pr=e.target.closest('[data-pr]');
+  if(pr){const it=carrito.find(c=>c.codigo===pr.dataset.pr),td=pr.parentNode;
+    td.innerHTML=`<input class="input" type="number" inputmode="numeric" min="1" value="${pu(it)}" style="width:110px;text-align:right" title="Precio por unidad">`;
+    const inp=td.firstChild;inp.focus();inp.select();let hecho=false;
+    const fin=ok=>{if(hecho)return;hecho=true;const v=Math.round(+inp.value);
+      if(ok&&v>0)it.precio=v===prod(it.codigo).precio?0:v;render();scan.focus()};
+    inp.onkeydown=k=>{if(k.key==='Enter')fin(true);if(k.key==='Escape')fin(false)};inp.onblur=()=>fin(true);return}
+  const b=e.target.closest('[data-c]');if(!b)return;const it=carrito.find(c=>c.codigo===b.dataset.c);it.cantidad+=+b.dataset.d;if(it.cantidad<=0)carrito=carrito.filter(c=>c!==it);render();scan.focus()};
+$('#medios').onclick=e=>{const b=e.target.closest('[data-m]');if(!b)return;medio=b.dataset.m;render();
+  if(medio==='Fiado'){dibujarCliente();if(!cliente)$('#cliQ').focus()}};
+$('#paga').oninput=vuelto;
+$('#extraPct').oninput=()=>render();$('#extraTipo').onchange=()=>render();
+$('#extraRap').onclick=e=>{const b=e.target.closest('[data-x]');if(!b)return;$('#extraPct').value=b.dataset.x==='0'?'':b.dataset.x;render()};
+$('#recargar').onclick=()=>cargar();
+function setModo(m){modo=m;$('#mCobrar').classList.toggle('on',m==='cobrar');$('#mConsulta').classList.toggle('on',m==='consulta');$('#paneTicket').hidden=m!=='cobrar';$('#paneConsulta').hidden=m!=='consulta';$('#cobro').hidden=m!=='cobrar';scan.focus()}
+$('#mCobrar').onclick=()=>setModo('cobrar');$('#mConsulta').onclick=()=>setModo('consulta');
+
+/* ---------- Cobro ---------- */
+$('#cobrar').onclick=()=>{if(ocupado)return;ocupado=true;render();
+  google.script.run.withSuccessHandler(v=>{ocupado=false;
+    if(v.cliente){const c=clientes.find(x=>x.nombre===v.cliente);if(c){c.fiado+=v.total;v.deuda=c.fiado}}
+    mostrarTicket(v);if($('#autoImp').checked)setTimeout(()=>$('#imprimir').click(),300);carrito.forEach(c=>{const p=prod(c.codigo);p.stock-=c.cantidad});carrito=[];$('#paga').value='';$('#extraPct').value='';$('#extraTipo').value='-1';$('#facturar').checked=false;
+    if(medio==='Fiado'){medio='Efectivo';cliente=null}
+    if(editando){editando=null;cargar();if(v.avisoReemplazo)mostrarError(v.avisoReemplazo)}
+    render();resumen()})
+  .withFailureHandler(e=>{ocupado=false;render();mostrarError(e)})
+  .registrarVenta({pin:pin,items:carrito,medio:medio,cliente:cliente?cliente.nombre:'',facturar:$('#facturar').checked,reemplaza:editando||'',extra:extra()})};
+$('#editCancelar').onclick=()=>{editando=null;carrito=[];medio='Efectivo';cliente=null;dibujarCliente();render();scan.focus()};
+
+function mostrarTicket(v){const f=v.factura,fecha=new Date(v.fecha).toLocaleString('es-AR');
+  $('#ticket').innerHTML=`<h2>${cfg.comercio}</h2><div class="c">${cfg.direccion}<br>WhatsApp ${cfg.whatsapp||''}<br>Instagram ${cfg.instagram||''}</div><hr>
+  <div class="c"><b>${f?f.comprobante+' N° '+f.numero:'Ticket no fiscal · '+v.id}</b><br>${fecha}</div><hr>
+  ${v.lineas.map(l=>`<div>${l.nombre}</div><div class="r"><span>${l.cantidad} × ${ars(l.precio)}</span><span>${ars(l.cantidad*l.precio)}</span></div>`).join('')}<hr>
+  ${v.ajuste||v.extra?`<div class="r"><span>Subtotal</span><span>${ars(v.subtotal)}</span></div>`:''}
+  ${v.ajuste?`<div class="r"><span>${v.ajuste<0?'Descuento':'Recargo'} ${v.medio} ${Math.abs(v.ajustePct)}%</span><span>${v.ajuste<0?'−':'+'}${ars(Math.abs(v.ajuste))}</span></div>`:''}
+  ${v.extra?`<div class="r"><span>${v.extra<0?'Descuento':'Recargo'} ${Math.abs(v.extraPct)}%</span><span>${v.extra<0?'−':'+'}${ars(Math.abs(v.extra))}</span></div>`:''}
+  <div class="r tot"><span>TOTAL</span><span>${ars(v.total)}</span></div><div class="r"><span>Pago</span><span>${v.medio}</span></div>
+  ${v.cliente?`<div class="r"><span>Cliente</span><span>${esc(v.cliente)}</span></div>${v.deuda!=null?`<div class="r"><span>Debe en total</span><span>${ars(v.deuda)}</span></div>`:''}`:''}
+  ${f?`<hr><div>CAE: ${f.cae}<br>Vto. CAE: ${f.vencimiento}</div><div id="qr"></div>${f.demo?'<div class="demo">DEMOSTRACIÓN · SIN VALIDEZ FISCAL</div>':''}`:''}
+  <hr><div class="c">¡Gracias por tu compra!</div>`;
+  $('#modal').hidden=false;
+  if(f&&window.QRCode)new QRCode($('#qr'),{text:f.qr,width:120,height:120,correctLevel:QRCode.CorrectLevel.M})}
+try{$('#autoImp').checked=localStorage.getItem('autoImp')==='1'}catch(e){}
+$('#autoImp').onchange=e=>{try{localStorage.setItem('autoImp',e.target.checked?'1':'0')}catch(_){}};
+$('#imprimir').onclick=()=>{let d=$('#imp');if(!d){d=document.createElement('div');d.id='imp';d.className='tk';document.body.appendChild(d)}
+  d.innerHTML=$('#ticket').innerHTML;document.body.classList.add('imp');window.print();setTimeout(()=>document.body.classList.remove('imp'),1000)};
+$('#nueva').onclick=()=>{$('#modal').hidden=true;if(!$('#cliModal').hidden)return;scan.focus()};
+document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(!$('#prodModal').hidden){cerrarAlta();return}
+  if(!$('#modal').hidden){$('#modal').hidden=true;return}
+  if(!$('#barModal').hidden){$('#barModal').hidden=true;scan.focus();return}
+  if(!$('#spModal').hidden){$('#spModal').hidden=true;scan.focus();return}
+  if(!$('#precModal').hidden){cerrarPrecios();return}
+  ['#celModal','#ventasModal','#cierreModal','#cliModal'].forEach(s=>$(s).hidden=true);scan.focus()});
+
+/* ---------- Producto nuevo ---------- */
+const num=s=>Number(String(s||'').replace(/\D/g,''))||0;
+function opciones(sel,lista,vacio){sel.innerHTML=(vacio?`<option value="">${vacio}</option>`:'')+lista.map(x=>`<option>${esc(x)}</option>`).join('')}
+// Un código desconocido (lectora, celu o tipeado) abre el alta. Si ya está abierta, queda en fila.
+function pedirAlta(codigo){
+  if(porCodigo(codigo)){agregar(porCodigo(codigo));return}
+  if(!$('#prodModal').hidden){
+    if(!$('#pCodigo').value.trim()){$('#pCodigo').value=codigo;$('#pNombre').focus()}
+    else if($('#pCodigo').value.trim()!==codigo&&!altas.includes(codigo))altas.push(codigo);
+    return}
+  abrirAlta(codigo)}
+function abrirAlta(codigo,nombre){
+  $('#prodForm').reset();$('#prodErr').hidden=true;$('#pMargen').textContent='';
+  opciones($('#pCategoria'),categorias.length?categorias:['General']);
+  opciones($('#pProveedor'),proveedores,'Sin proveedor');
+  $('#pCodigo').value=codigo||'';$('#prodTag').hidden=!codigo;$('#pNombre').value=nombre||'';$('#pMarca').value='';$('#marcasList').innerHTML=marcasAct().map(m=>`<option value="${esc(m)}">`).join('');
+  $('#asigBox').hidden=!codigo;$('#asigQ').value='';$('#asigList').hidden=true;
+  $('#prodIntro').textContent=codigo?'Este código no está cargado. Completá los datos: se guarda en la planilla y en la app, y se suma al ticket.':'Escaneá el código (con la lectora o el celu) y completá los datos. Se guarda en la planilla y en la app.';
+  if(nombre)$('#prodIntro').textContent='No encontré ese producto. Completá los datos y se guarda en la planilla y en la app. El código de barras es opcional.';
+  $('#prodModal').hidden=false;(codigo?$('#asigQ'):nombre?$('#pPrecio'):$('#pCodigo')).focus()}
+function cerrarAlta(){$('#prodModal').hidden=true;const sig=altas.shift();if(sig&&!porCodigo(sig))abrirAlta(sig);else scan.focus()}
+$('#btnProducto').onclick=()=>abrirAlta('');
+$('#prodCancelar').onclick=cerrarAlta;
+function margen(){const c=num($('#pCosto').value),p=num($('#pPrecio').value);
+  $('#pMargen').textContent=c&&p?`Ganancia ${ars(p-c)} por unidad (${Math.round((p/c-1)*100)}% sobre el costo)`:c?'Con 60% de margen sería '+ars(Math.round(c*1.6/10)*10):''}
+$('#pCosto').oninput=$('#pPrecio').oninput=margen;
+$('#pCodigo').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const c=$('#pCodigo').value.trim();
+  if(porCodigo(c)){$('#prodErr').textContent='Ese código ya está cargado: '+porCodigo(c).nombre;$('#prodErr').hidden=false;return}$('#pNombre').focus()}};
+$('#prodForm').onsubmit=e=>{e.preventDefault();
+  const d={codigo:$('#pCodigo').value.trim(),nombre:$('#pNombre').value.trim(),categoria:$('#pCategoria').value,proveedor:$('#pProveedor').value,marca:$('#pMarca').value.trim(),
+    costo:num($('#pCosto').value),precio:num($('#pPrecio').value),stock:num($('#pStock').value),minimo:num($('#pMinimo').value),rapido:$('#pRapido').value.trim().toUpperCase()};
+  const igual=productos.find(p=>sinTildes(p.nombre).trim()===sinTildes(d.nombre).trim());
+  const usadoR=d.rapido&&porCodigo(d.rapido);
+  const err=d.codigo&&porCodigo(d.codigo)?'Ese código ya está cargado: '+porCodigo(d.codigo).nombre:!d.nombre?'Escribí el nombre del producto.':igual?'Ya existe "'+igual.nombre+'". Usá "¿Es un producto que ya está cargado?" arriba, o cambiá el nombre.':usadoR?'El código rápido '+d.rapido+' ya es de "'+usadoR.nombre+'".':!d.precio?'Poné el precio de venta.':'';
+  if(err){$('#prodErr').textContent=err;$('#prodErr').hidden=false;return}
+  const b=$('#prodGuardar');b.disabled=true;b.textContent='Guardando…';
+  google.script.run.withSuccessHandler(p=>{b.disabled=false;b.textContent='Guardar';
+    productos.push({codigo:p.codigo,barras:d.codigo,rapido:d.rapido,nombre:p.nombre,precio:p.precio,categoria:p.categoria,marca:d.marca,stock:p.stock,minimo:p.minimo});
+    $('#direccion').textContent=cfg.direccion+' · '+productos.length+' artículos';
+    if(modo==='cobrar'||modo==='consulta')agregar(prod(p.codigo));
+    cerrarAlta()})
+  .withFailureHandler(e2=>{b.disabled=false;b.textContent='Guardar';$('#prodErr').textContent=(e2&&e2.message)||String(e2);$('#prodErr').hidden=false})
+  .crearProducto(pin,d)};
+
+/* ---------- Ventas de hoy y anulación ---------- */
+let ventasHoy=[];
+$('#btnVentas').onclick=()=>{$('#ventasModal').hidden=false;cargarVentas()};
+$('#ventasCerrar').onclick=()=>{$('#ventasModal').hidden=true;scan.focus()};
+function cargarVentas(){$('#vlist').innerHTML='<div class="empty">Cargando…</div>';
+  google.script.run.withSuccessHandler(v=>{ventasHoy=v;dibujarVentas()}).withFailureHandler(e=>{$('#vlist').innerHTML='';mostrarError(e)}).ventasDelDia(pin)}
+function dibujarVentas(){
+  $('#vlist').innerHTML=ventasHoy.length?ventasHoy.map(v=>{const an=v.estado==='Anulada';return`<div class="venta ${an?'anulada':''}" data-id="${v.id}">
+    <div class="top"><span><b>${v.hora}</b> · ${v.medio}${v.cliente?' · '+esc(v.cliente):''} ${v.comprobante?'· <small>'+v.comprobante+'</small>':''}</span>
+      <span style="display:flex;gap:8px;align-items:center">${an?'<span class="pill bad">Anulada</span>':''}<b>${ars(v.total)}</b>
+      ${an?'':`<button class="btn ghost small" data-editar="${v.id}">Editar</button><button class="btn ghost small" data-anular="${v.id}">Anular</button>`}</span></div>
+    <ul>${v.lineas.map(l=>`<li>${l.cantidad} × ${l.nombre}</li>`).join('')}</ul>
+    ${an&&v.notaCredito?`<small>${v.notaCredito}</small>`:''}
+    <div class="anular" hidden><input placeholder="Motivo (ej: se cobró de más)" aria-label="Motivo de la anulación">
+      <button class="btn danger" data-confirmar="${v.id}">Confirmar anulación</button>
+      ${v.comprobante?'<small style="width:100%">Esta venta está facturada: se va a emitir una nota de crédito.</small>':''}</div>
+  </div>`}).join(''):'<div class="empty">Todavía no hay ventas hoy.</div>'}
+$('#vlist').onclick=e=>{
+  const ed=e.target.closest('[data-editar]');
+  if(ed){const v=ventasHoy.find(x=>x.id===ed.dataset.editar);if(!v)return;
+    if(v.comprobante&&!confirm('Esta venta está facturada: al editarla se emite una nota de crédito y una factura nueva. ¿Seguir?'))return;
+    const falta=v.lineas.filter(l=>!prod(l.codigo));if(falta.length){mostrarError('No encuentro en la lista: '+falta.map(l=>l.nombre).join(', '));return}
+    const fac=1+pctMedio(v.medio)/100;
+    carrito=v.lineas.map(l=>{const base=Math.round(l.precio/fac);return{codigo:l.codigo,cantidad:l.cantidad,precio:Math.abs(base-prod(l.codigo).precio)<=1?0:base}});
+    medio=v.medio||'Efectivo';cliente=v.cliente?(clientes.find(c=>c.nombre===v.cliente)||null):null;editando=v.id;
+    $('#ventasModal').hidden=true;setModo('cobrar');dibujarCliente();render();return}
+  const a=e.target.closest('[data-anular]');
+  if(a){const box=a.closest('.venta').querySelector('.anular');box.hidden=!box.hidden;if(!box.hidden)box.querySelector('input').focus();return}
+  const c=e.target.closest('[data-confirmar]');if(!c)return;
+  const motivo=c.parentElement.querySelector('input').value.trim();
+  if(!motivo){mostrarError('Escribí el motivo de la anulación.');return}
+  c.disabled=true;c.textContent='Anulando…';
+  google.script.run.withSuccessHandler(r=>{cargarVentas();cargar();resumen()})
+    .withFailureHandler(err=>{c.disabled=false;c.textContent='Confirmar anulación';mostrarError(err)})
+    .anularVenta(pin,c.dataset.confirmar,motivo)};
+
+/* ---------- Cierre de caja ---------- */
+let cierre=null;
+$('#btnCierre').onclick=()=>{cierre=null;$('#cierreModal').hidden=false;$('#contado').value='';$('#cierreNota').value='';$('#cierreOk').disabled=true;
+  $('#cierreDesde').textContent='Calculando…';$('#cierreTabla').innerHTML='';difCierre();
+  google.script.run.withSuccessHandler(r=>{cierre=r;
+    $('#cierreDesde').textContent=`${r.cantidad} ventas desde el último cierre (${r.desdeTexto}).`;
+    $('#cierreTabla').innerHTML=Object.entries(r.porMedio).map(([m,v])=>`<div class="crow"><span>${m}</span><b>${ars(v)}</b></div>`).join('')+`<div class="crow tot"><span>Total vendido</span><b>${ars(r.total)}</b></div>`+
+      (r.cobrosTotal?Object.entries(r.cobros).map(([m,v])=>`<div class="crow"><span>Cobro de fiado · ${m}</span><b>${ars(v)}</b></div>`).join('')+`<div class="crow"><span>Efectivo esperado en caja</span><b>${ars(r.efectivoEsperado)}</b></div>`:'');
+    $('#cierreOk').disabled=false;difCierre();$('#contado').focus()}).withFailureHandler(e=>{$('#cierreModal').hidden=true;mostrarError(e)}).resumenCaja(pin)};
+$('#cierreCancelar').onclick=()=>{$('#cierreModal').hidden=true;scan.focus()};
+$('#contado').oninput=difCierre;
+function difCierre(){const box=$('#dif'),v=$('#contado').value.replace(/\D/g,'');
+  if(!cierre||v===''){box.className='dif neutral';box.innerHTML='<span>Diferencia</span><span>—</span>';return}
+  const d=Number(v)-cierre.efectivoEsperado;
+  box.className='dif '+(d===0?'ok':'bad');
+  box.innerHTML=`<span>${d===0?'La caja cierra justo':d>0?'Sobra efectivo':'Falta efectivo'}</span><span>${d===0?'$0':(d>0?'+':'−')+ars(Math.abs(d))}</span>`}
+$('#cierreOk').onclick=()=>{const b=$('#cierreOk');b.disabled=true;b.textContent='Guardando…';
+  google.script.run.withSuccessHandler(r=>{b.textContent='Confirmar cierre';$('#cierreModal').hidden=true;resumen();ticketCierre(r)})
+    .withFailureHandler(e=>{b.disabled=false;b.textContent='Confirmar cierre';mostrarError(e)})
+    .cerrarCaja(pin,$('#contado').value,$('#cierreNota').value)};
+function ticketCierre(r){const f=s=>new Date(s).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  $('#ticket').innerHTML=`<h2>${cfg.comercio}</h2><div class="c"><b>Cierre de caja ${r.id}</b><br>${f(r.desde)} a ${f(r.hasta)}</div><hr>
+  ${Object.entries(r.porMedio).map(([m,v])=>`<div class="r"><span>${m}</span><span>${ars(v)}</span></div>`).join('')}<hr>
+  <div class="r tot"><span>TOTAL</span><span>${ars(r.total)}</span></div><div class="r"><span>Ventas</span><span>${r.cantidad}</span></div><hr>
+  ${r.cobrosTotal?`<div class="r"><span>Cobros de fiado</span><span>${ars(r.cobrosTotal)}</span></div>`:''}
+  <div class="r"><span>Efectivo esperado</span><span>${ars(r.efectivoEsperado)}</span></div>
+  <div class="r"><span>Efectivo contado</span><span>${ars(r.contado)}</span></div>
+  <div class="r tot"><span>Diferencia</span><span>${r.diferencia===0?'$0':(r.diferencia>0?'+':'−')+ars(Math.abs(r.diferencia))}</span></div>`;
+  $('#nueva').textContent='Listo';$('#modal').hidden=false}
+$('#nueva').addEventListener('click',()=>{$('#nueva').textContent='Nueva venta'});
+
+/* ---------- Si Google no responde, que nada quede colgado ---------- */
+document.querySelectorAll('button').forEach(b=>b.dataset.t=b.textContent);
+setInterval(()=>{document.querySelectorAll('button').forEach(b=>{
+  if(b.textContent.trim().endsWith('…')&&b.disabled){b._desde=b._desde||Date.now();
+    if(Date.now()-b._desde>30000){b._desde=0;b.disabled=false;if(b.dataset.t)b.textContent=b.dataset.t;
+      if(b.id==='cobrar'){ocupado=false;render()}
+      mostrarError('Google tardó demasiado en responder. Revisá la conexión y probá de nuevo (fijate en "Ventas de hoy" que no se haya guardado dos veces).')}}
+  else b._desde=0})},5000);
+
+/* ---------- Código de barras ---------- */
+let barProd=null;
+function editarBarras(p){if(!p)return;barProd=p;
+  opciones($('#eCategoria'),[...new Set([p.categoria,...categorias].filter(Boolean))]);$('#eCategoria').value=p.categoria||'';
+  opciones($('#eProveedor'),proveedores,'Sin proveedor');$('#eProveedor').value=p.proveedor||'';
+  $('#marcasList').innerHTML=marcasAct().map(m=>`<option value="${esc(m)}">`).join('');
+  $('#eNombre').value=p.nombre||'';$('#eMarca').value=p.marca||'';$('#eMinimo').value=p.minimo||'';
+  $('#eCosto').value=p.costo?Math.round(p.costo):'';$('#ePrecio').value=p.precio>0?Math.round(p.precio):'';
+  $('#barInput').value=p.barras||'';$('#barRapido').value=p.rapido||'';$('#barErr').hidden=true;
+  $('#barGuardar').disabled=false;$('#barGuardar').textContent='Guardar';$('#barBorrar').disabled=false;$('#barBorrar').textContent='Borrar producto';
+  $('#results').hidden=true;$('#barModal').hidden=false;$('#eNombre').focus()}
+$('#lookup').onclick=e=>{const b=e.target.closest('[data-bar]');if(b)editarBarras(prod(b.dataset.bar))};
+$('#barCancelar').onclick=()=>{$('#barModal').hidden=true;scan.focus()};
+const barErr=t=>{$('#barErr').textContent=t;$('#barErr').hidden=false};
+$('#barForm').onsubmit=e=>{e.preventDefault();const p=barProd,b=$('#barGuardar');
+  const n={nombre:$('#eNombre').value.trim(),categoria:$('#eCategoria').value,marca:$('#eMarca').value.trim(),proveedor:$('#eProveedor').value,
+    minimo:num($('#eMinimo').value),costo:num($('#eCosto').value),precio:num($('#ePrecio').value),
+    barras:$('#barInput').value.trim(),rapido:$('#barRapido').value.trim().toUpperCase()};
+  if(!n.nombre)return barErr('Escribí el nombre.');
+  const igual=productos.find(x=>x!==p&&sinTildes(x.nombre).trim()===sinTildes(n.nombre).trim());if(igual)return barErr('Ya existe otro producto llamado "'+igual.nombre+'".');
+  const otro=n.barras&&productos.find(x=>x!==p&&(x.barras===n.barras||x.codigo===n.barras));if(otro)return barErr('Ese código de barras ya es de "'+otro.nombre+'".');
+  const otroR=n.rapido&&productos.find(x=>x!==p&&x.rapido===n.rapido);if(otroR)return barErr('El código rápido '+n.rapido+' ya es de "'+otroR.nombre+'".');
+  const viejo={nombre:p.nombre||'',categoria:p.categoria||'',marca:p.marca||'',proveedor:p.proveedor||'',minimo:Number(p.minimo)||0,costo:Math.round(p.costo||0),precio:Math.round(p.precio||0),barras:p.barras||'',rapido:p.rapido||''};
+  const cambios={};Object.keys(n).forEach(k=>{if(String(n[k])!==String(viejo[k]))cambios[k]=n[k]});
+  if(!Object.keys(cambios).length){$('#barModal').hidden=true;scan.focus();return}
+  b.disabled=true;b.textContent='Guardando…';
+  google.script.run.withSuccessHandler(()=>{Object.assign(p,cambios);$('#barModal').hidden=true;render();if(modo==='consulta')agregar(p);scan.value='';scan.focus()})
+    .withFailureHandler(err=>{b.disabled=false;b.textContent='Guardar';barErr((err&&err.message)||String(err))})
+    .editarProducto(pin,p.codigo,cambios)};
+$('#barInput').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('#barRapido').focus()}};
+$('#barBorrar').onclick=()=>{const p=barProd,b=$('#barBorrar');
+  if(!confirm('¿Borrar "'+p.nombre+'" de la lista de productos? No se puede deshacer.'))return;
+  b.disabled=true;b.textContent='Borrando…';
+  google.script.run.withSuccessHandler(()=>{productos=productos.filter(x=>x!==p);carrito=carrito.filter(c=>c.codigo!==p.codigo);
+      $('#barModal').hidden=true;$('#lookup').innerHTML='';render();scan.value='';scan.focus()})
+    .withFailureHandler(err=>{b.disabled=false;b.textContent='Borrar producto';barErr((err&&err.message)||String(err))})
+    .borrarProducto(pin,p.codigo)};
+
+/* ---------- Producto sin precio ---------- */
+let spProd=null;
+function pedirPrecio(p){spProd=p;$('#spNombre').textContent=p.nombre;
+  $('#spCosto').textContent=p.costo?'Costo '+ars(p.costo)+' · con 60% de margen sería '+ars(redondear(p.costo*1.6,100)):'';
+  $('#spPrecio').value='';$('#spModal').hidden=false;$('#spPrecio').focus()}
+$('#spCancelar').onclick=()=>{$('#spModal').hidden=true;scan.focus()};
+$('#spForm').onsubmit=e=>{e.preventDefault();const pr=num($('#spPrecio').value);if(!pr){$('#spPrecio').focus();return}
+  const p=spProd,b=$('#spGuardar');b.disabled=true;b.textContent='Guardando…';
+  google.script.run.withSuccessHandler(()=>{b.disabled=false;b.textContent='Guardar y agregar';p.precio=pr;if(p.costo)p.margen=pr/p.costo-1;$('#spModal').hidden=true;agregar(p);scan.focus()})
+    .withFailureHandler(err=>{b.disabled=false;b.textContent='Guardar y agregar';mostrarError(err)})
+    .guardarPrecios(pin,[{codigo:p.codigo,precio:pr,margen:p.costo?pr/p.costo-1:''}])};
+
+/* ---------- Asignar código a un producto cargado ---------- */
+$('#asigQ').oninput=()=>{const q=sinTildes($('#asigQ').value.trim()),box=$('#asigList');
+  if(q.length<2){box.hidden=true;return}
+  const ws=q.split(/\s+/),l=productos.filter(p=>{const n=sinTildes(p.nombre);return ws.every(w=>n.includes(w))}).slice(0,12);
+  box.innerHTML=l.map(p=>`<button type="button" data-c="${esc(p.codigo)}"><span>${esc(p.nombre)}</span><small>${p.precio>0?ars(p.precio):'sin precio'}</small></button>`).join('')||'<div class="empty" style="padding:12px">No lo encontré: cargalo abajo como nuevo.</div>';box.hidden=false};
+$('#asigQ').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const b=$('#asigList button');if(b)b.click()}};
+$('#asigList').onclick=e=>{const b=e.target.closest('[data-c]');if(!b)return;
+  const nuevo=$('#pCodigo').value.trim(),p=prod(b.dataset.c);if(!nuevo||!p)return;
+  b.disabled=true;b.querySelector('small').textContent='Asignando…';
+  google.script.run.withSuccessHandler(()=>{p.barras=nuevo;cerrarAlta();agregar(p)})
+    .withFailureHandler(err=>{b.disabled=false;$('#prodErr').textContent=(err&&err.message)||String(err);$('#prodErr').hidden=false})
+    .asignarCodigo(pin,b.dataset.c,nuevo)};
+
+/* ---------- Precios ---------- */
+const redondear=(v,r)=>Math.max(r,Math.round(v/r)*r);
+let pend={},precFiltro=[],sel=new Set();
+const objetivo=()=>sel.size?precFiltro.filter(p=>sel.has(p.codigo)):precFiltro;
+$('#selTodos').onchange=e=>{sel=new Set(e.target.checked?precFiltro.map(p=>p.codigo):[]);dibujarPrecios()};
+$('#btnPrecios').onclick=()=>{pend={};sel=new Set();
+  opciones($('#precCat'),categorias);$('#precCat').insertAdjacentHTML('afterbegin','<option value="">Todas las categorías</option>');$('#precCat').value='';
+  const ms=marcasAct();opciones($('#precMarca'),ms);$('#precMarca').insertAdjacentHTML('afterbegin','<option value="">Todas las marcas</option><option value="-">Sin marca</option>');$('#precMarca').value='';
+  $('#marcasList').innerHTML=ms.map(m=>`<option value="${esc(m)}">`).join('');
+  opciones($('#precProv'),proveedores);$('#precProv').insertAdjacentHTML('afterbegin','<option value="">Todos los proveedores</option><option value="-">Sin proveedor</option>');$('#precProv').value='';
+  $('#precQ').value='';$('#precSin').checked=productos.some(p=>!(p.precio>0));
+  $('#precModal').hidden=false;dibujarPrecios();$('#precQ').focus()};
+function cerrarPrecios(){if(Object.keys(pend).length&&!confirmarSalida())return;$('#precModal').hidden=true;scan.focus()}
+function confirmarSalida(){$('#precInfo').innerHTML='<b style="color:var(--bad)">Tenés cambios sin guardar.</b> Tocá "Guardar cambios" o volvé a tocar Cerrar para descartarlos.';
+  if(confirmarSalida.ya){confirmarSalida.ya=false;pend={};return true}confirmarSalida.ya=true;return false}
+$('#precCerrar').onclick=cerrarPrecios;
+const val=(p,k)=>pend[p.codigo]&&pend[p.codigo][k]!==undefined?pend[p.codigo][k]:p[k];
+function filtrarPrecios(){const q=sinTildes($('#precQ').value.trim()),cat=$('#precCat').value,prov=$('#precProv').value,mar=$('#precMarca').value,sin=$('#precSin').checked;
+  const ex=porCodigo($('#precQ').value.trim());if(ex)return[ex];
+  const ws=q?q.split(/\s+/):[];
+  return productos.filter(p=>(!cat||p.categoria===cat)&&(!mar||(mar==='-'?!val(p,'marca'):val(p,'marca')===mar))&&(!prov||(prov==='-'?!p.proveedor:p.proveedor===prov))&&(!sin||!(val(p,'precio')>0)||pend[p.codigo])&&(!ws.length||ws.every(w=>sinTildes(p.nombre).includes(w))))}
+function dibujarPrecios(){precFiltro=filtrarPrecios();const vis0=new Set(precFiltro.map(p=>p.codigo));sel.forEach(c=>{if(!vis0.has(c))sel.delete(c)});
+  $('#precN').textContent=objetivo().length;$('#precQue').textContent=sel.size?'seleccionados':'filtrados';$('#selTodos').checked=sel.size>0&&sel.size===precFiltro.length;
+  const n=Object.keys(pend).length;$('#precGuardar').disabled=!n;$('#precGuardar').textContent=n?'Guardar cambios ('+n+')':'Guardar cambios';
+  const vis=precFiltro.slice(0,250);
+  $('#precBody').innerHTML=vis.map(p=>{const pr=val(p,'precio'),co=val(p,'costo'),mg=val(p,'margen');
+    return`<tr data-c="${esc(p.codigo)}" class="${pend[p.codigo]?'mod':''} ${pr>0?'':'cero'}"><td><input type="checkbox" class="selp" ${sel.has(p.codigo)?'checked':''} style="width:18px;height:18px"></td><td>${esc(p.nombre)}<br><small>${esc(p.categoria||'')}${val(p,'marca')?' · <b>'+esc(val(p,'marca'))+'</b>':''}${p.proveedor?' · '+esc(p.proveedor):''}</small></td>
+    <td><input data-k="costo" value="${co?Math.round(co):''}" inputmode="numeric"></td>
+    <td><input data-k="margen" value="${mg!=null&&co?Math.round(mg*100):''}" inputmode="numeric"></td>
+    <td><input class="pr" data-k="precio" value="${pr>0?Math.round(pr):''}" inputmode="numeric" placeholder="$"></td></tr>`}).join('')||'<tr><td class="empty" colspan="5">No hay productos con ese filtro.</td></tr>';
+  if(precFiltro.length>250)$('#precBody').insertAdjacentHTML('beforeend',`<tr><td colspan="5" class="sub">Se muestran 250 de ${precFiltro.length}. Usá el buscador o los filtros para ver el resto (los botones de arriba aplican a todos).</td></tr>`)}
+function cambiar(p,k,v){pend[p.codigo]=Object.assign(pend[p.codigo]||{},{[k]:v})}
+['#precQ','#precCat','#precMarca','#precProv','#precSin'].forEach(s=>$(s).addEventListener(s==='#precQ'?'input':'change',dibujarPrecios));
+$('#precQ').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const i=$('#precBody input.pr');if(i){i.focus();i.select()}}};
+$('#precBody').addEventListener('change',e=>{const ck=e.target.closest('.selp');
+  if(ck){const c=ck.closest('tr').dataset.c;ck.checked?sel.add(c):sel.delete(c);$('#precN').textContent=objetivo().length;$('#precQue').textContent=sel.size?'seleccionados':'filtrados';return}const i=e.target.closest('input[data-k]');if(!i)return;
+  const p=prod(i.closest('tr').dataset.c),k=i.dataset.k,v=num(i.value),r=Number($('#bRed').value);
+  const co=val(p,'costo');
+  if(k==='precio'){cambiar(p,'precio',v);if(co)cambiar(p,'margen',v/co-1)}
+  if(k==='costo'){cambiar(p,'costo',v);const mg=val(p,'margen');if(v&&mg!=null)cambiar(p,'precio',redondear(v*(1+mg),r))}
+  if(k==='margen'){if(!co){mostrarError('Para usar margen, cargá primero el costo.');dibujarPrecios();return}cambiar(p,'margen',v/100);cambiar(p,'precio',redondear(co*(1+v/100),r))}
+  dibujarPrecios()});
+$('#precBody').addEventListener('keydown',e=>{if(e.key!=='Enter')return;e.preventDefault();e.target.blur();
+  const ins=[...$('#precBody').querySelectorAll('input.pr')],tr=e.target.closest('tr');const sig=tr&&tr.nextElementSibling&&tr.nextElementSibling.querySelector('input.pr');
+  setTimeout(()=>{const t=sig&&$('#precBody').querySelector(`tr[data-c="${CSS.escape(sig.closest('tr').dataset.c)}"] input.pr`);if(t){t.focus();t.select()}},0)});
+$('#bMargenOk').onclick=()=>{const m=num($('#bMargen').value),r=Number($('#bRed').value);if(!m){$('#bMargen').focus();return}
+  let n=0,sinCosto=0;objetivo().forEach(p=>{const co=val(p,'costo');if(!co){sinCosto++;return}cambiar(p,'margen',m/100);cambiar(p,'precio',redondear(co*(1+m/100),r));n++});
+  dibujarPrecios();$('#precInfo').textContent=`Margen ${m}% aplicado a ${n} productos${sinCosto?' ('+sinCosto+' sin costo quedaron igual)':''}. Revisá y tocá "Guardar cambios".`};
+const marcasAct=()=>[...new Set(productos.map(p=>val(p,'marca')).filter(Boolean))].sort();
+$('#bMarcaOk').onclick=()=>{const m=$('#bMarca').value.trim(),obj=objetivo();if(!obj.length)return;
+  if(!sel.size&&!confirm((m?'¿Poner la marca "'+m+'"':'¿Quitar la marca')+' a los '+obj.length+' productos filtrados?'))return;
+  const n=obj.length;obj.forEach(p=>cambiar(p,'marca',m));$('#bMarca').value='';sel.clear();dibujarPrecios();
+  $('#precInfo').textContent=`Marca ${m?'"'+m+'" asignada':'quitada'} a ${n} productos. Tocá "Guardar cambios".`};
+$('#bAumOk').onclick=()=>{const a=num($('#bAum').value)*Number($('#bDir').value),r=Number($('#bRed').value);if(!a){$('#bAum').focus();return}
+  let n=0;objetivo().forEach(p=>{const pr=val(p,'precio');if(!(pr>0))return;let nv=redondear(pr*(1+a/100),r);if(a<0&&nv>=pr)nv=Math.max(r,Math.floor(pr*(1+a/100)/r)*r);if(a>0&&nv<=pr)nv=Math.ceil(pr*(1+a/100)/r)*r;cambiar(p,'precio',nv);const co=val(p,'costo');if(co)cambiar(p,'margen',nv/co-1);n++});
+  dibujarPrecios();$('#precInfo').textContent=`${a>0?'Aumento':'Baja'} de ${Math.abs(a)}% aplicado a ${n} productos. Revisá y tocá "Guardar cambios".`};
+$('#precGuardar').onclick=()=>{const b=$('#precGuardar'),ch=Object.entries(pend).map(([c,v])=>Object.assign({codigo:c},v));
+  b.disabled=true;b.textContent='Guardando…';
+  google.script.run.withSuccessHandler(n=>{ch.forEach(c=>{const p=prod(c.codigo);if(!p)return;['precio','costo','margen'].forEach(k=>{if(c[k]!==undefined&&c[k]!=='')p[k]=c[k]});if(c.marca!==undefined)p.marca=c.marca});
+    pend={};dibujarPrecios();$('#precInfo').textContent=`Listo: ${n} productos actualizados.`})
+    .withFailureHandler(err=>{dibujarPrecios();mostrarError(err)})
+    .guardarPrecios(pin,ch)};
+
+/* ---------- Clientes ---------- */
+let clActual=null,cpMedio='Efectivo';
+$('#btnClientes').onclick=()=>{$('#cliModal').hidden=false;verLista();cargar(()=>verLista())};
+$('#clCerrar').onclick=()=>{$('#cliModal').hidden=true;scan.focus()};
+$('#clVolver').onclick=()=>verLista();
+function verLista(){clActual=null;$('#clTit').textContent='Clientes';$('#clVolver').hidden=true;$('#clLista').hidden=false;$('#clDet').hidden=true;
+  const q=sinTildes($('#clQ').value.trim()),l=clientes.filter(c=>!q||sinTildes(c.nombre).includes(q)).sort((a,z)=>z.fiado-a.fiado||a.nombre.localeCompare(z.nombre));
+  const tot=clientes.reduce((s,c)=>s+Math.max(0,c.fiado),0);
+  $('#clTotal').textContent=clientes.length?`${clientes.length} clientes · te deben ${ars(tot)} en total`:'Todavía no hay clientes. Se cargan acá o al fiar desde la caja.';
+  $('#clList').innerHTML=l.map(c=>`<button type="button" data-cli="${esc(c.nombre)}"><span>${esc(c.nombre)}</span><small>${c.fiado>0?'debe '+ars(c.fiado):'al día'}</small></button>`).join('')}
+$('#clQ').oninput=verLista;
+$('#clNuevoBtn').onclick=()=>{$('#clNuevo').hidden=false;$('#clnNombre').value=$('#clQ').value.trim();$('#clnTel').value='';$('#clnNombre').focus()};
+$('#clnCancelar').onclick=()=>{$('#clNuevo').hidden=true};
+$('#clnGuardar').onclick=()=>{const b=$('#clnGuardar'),n=$('#clnNombre').value.trim();if(!n){$('#clnNombre').focus();return}
+  b.disabled=true;b.textContent='Guardando…';
+  google.script.run.withSuccessHandler(c=>{b.disabled=false;b.textContent='Guardar cliente';clientes.push(c);$('#clNuevo').hidden=true;$('#clQ').value='';verLista()})
+    .withFailureHandler(e=>{b.disabled=false;b.textContent='Guardar cliente';mostrarError(e)}).crearCliente(pin,n,$('#clnTel').value.trim())};
+$('#clList').onclick=e=>{const b=e.target.closest('[data-cli]');if(b)verCliente(clientes.find(c=>c.nombre===b.dataset.cli))};
+function waLink(c){let t=String(c.telefono||'').replace(/\D/g,'');if(!t)return'';
+  if(t.startsWith('0'))t=t.slice(1);if(t.startsWith('15'))t='11'+t.slice(2);if(!t.startsWith('54'))t='549'+t;
+  const msg=`Hola ${c.nombre.split(' ')[0]}, te escribimos de ${cfg.comercio}. Te recordamos que tenés un saldo pendiente de ${ars(c.fiado)}. ¡Gracias!`;
+  return'https:'+String.fromCharCode(47,47)+'wa.me/'+t+'?text='+encodeURIComponent(msg)}
+function verCliente(c){clActual=c;$('#clTit').textContent=c.nombre;$('#clVolver').hidden=false;$('#clLista').hidden=true;$('#clDet').hidden=false;
+  $('#clDeuda').textContent=ars(Math.max(0,c.fiado));$('#clDeuda').style.color=c.fiado>0?'var(--bad)':'var(--ok)';
+  $('#clTel').value=c.telefono||'';const w=waLink(c);$('#clWa').hidden=!(w&&c.fiado>0);$('#clWa').href=w||'#';
+  $('#cpImporte').value=c.fiado>0?Math.round(c.fiado):'';$('#cpNota').value='';dibujarMediosPago();
+  $('#clMovs').innerHTML='<div class="empty">Cargando…</div>';
+  google.script.run.withSuccessHandler(m=>{$('#clMovs').innerHTML=m.length?m.map(x=>`<div class="mov ${x.tipo}"><span><small class="sub">${x.fechaTexto}</small><br>${x.tipo==='pago'?'Pagó · ':'Fiado · '}${esc(x.detalle)}</span><b>${x.tipo==='pago'?'−':'+'}${ars(x.importe)}</b></div>`).join(''):'<div class="empty">Sin movimientos.</div>'})
+    .withFailureHandler(mostrarError).clienteDetalle(pin,c.nombre)}
+function dibujarMediosPago(){$('#cpMedios').innerHTML=MEDIOS.filter(m=>m!=='Fiado').map(m=>`<button class="chip ${m===cpMedio?'on':''}" data-m="${m}">${m}</button>`).join('')}
+$('#cpMedios').onclick=e=>{const b=e.target.closest('[data-m]');if(b){cpMedio=b.dataset.m;dibujarMediosPago()}};
+$('#clTelOk').onclick=()=>{const c=clActual,t=$('#clTel').value.trim(),b=$('#clTelOk');b.disabled=true;
+  google.script.run.withSuccessHandler(()=>{b.disabled=false;c.telefono=t;verCliente(c)}).withFailureHandler(e=>{b.disabled=false;mostrarError(e)}).guardarTelefono(pin,c.nombre,t)};
+$('#cpOk').onclick=()=>{const c=clActual,imp=num($('#cpImporte').value),b=$('#cpOk');if(!imp){$('#cpImporte').focus();return}
+  b.disabled=true;b.textContent='Guardando…';
+  google.script.run.withSuccessHandler(r=>{b.disabled=false;b.textContent='Registrar pago';c.fiado=r.deuda;verCliente(c);resumen();ticketPago(r)})
+    .withFailureHandler(e=>{b.disabled=false;b.textContent='Registrar pago';mostrarError(e)}).cobrarDeuda(pin,c.nombre,imp,cpMedio,$('#cpNota').value.trim())};
+function ticketPago(r){$('#ticket').innerHTML=`<h2>${cfg.comercio}</h2><div class="c">${cfg.direccion}</div><hr>
+  <div class="c"><b>Recibo de pago · ${r.id}</b><br>${new Date(r.fecha).toLocaleString('es-AR')}</div><hr>
+  <div class="r"><span>Cliente</span><span>${esc(r.nombre)}</span></div><div class="r tot"><span>PAGÓ</span><span>${ars(r.importe)}</span></div>
+  <div class="r"><span>Medio</span><span>${r.medio}</span></div><div class="r"><span>Saldo pendiente</span><span>${ars(Math.max(0,r.deuda))}</span></div><hr><div class="c">¡Gracias!</div>`;
+  $('#nueva').textContent='Listo';$('#modal').hidden=false}
+
+/* ---------- Celular como lectora ---------- */
+function beep(){try{if(!audio)return;const o=audio.createOscillator(),g=audio.createGain();o.frequency.value=1250;g.gain.value=.08;o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+.09)}catch(_){}}
+function estadoCel(){const activo=Date.now()-ultimoEscaneo<120000;$('#celChip').classList.toggle('on',activo);$('#celTxt').textContent=activo?'Celular conectado':'Vincular celular'}
+function recibir(items){
+  if(!items||!items.length)return;ultimoEscaneo=Date.now();estadoCel();
+  const chip=$('#celChip');chip.classList.add('flash');setTimeout(()=>chip.classList.remove('flash'),400);
+  let nuevos=false;
+  items.forEach(it=>{
+    let p=porCodigo(it.codigo);
+    if(!p&&it.nombre){p={codigo:it.codigo,nombre:it.nombre,precio:it.precio,categoria:'',stock:0,minimo:0};productos.push(p);nuevos=true}
+    beep();if(p)agregar(p);else pedirAlta(it.codigo);
+  });
+  if(nuevos)setTimeout(()=>cargar(),1500); // trae stock y categoría del producto nuevo sin frenar la venta
+}
+// Long polling: la consulta queda esperando en Google hasta 20 s y responde apenas llega un código del celular.
+function escuchar(){
+  if(escuchando)return;escuchando=true;
+  const ciclo=()=>{
+    if(document.hidden){pollTimer=setTimeout(ciclo,3000);return}
+    google.script.run
+      .withSuccessHandler(items=>{recibir(items);estadoCel();pollTimer=setTimeout(ciclo,50)})
+      .withFailureHandler(()=>{pollTimer=setTimeout(ciclo,5000)})
+      .tomarEscaneos(pin,CAJA,20)};
+  ciclo()}
+
+$('#celChip').onclick=()=>{
+  const q=$('#qrCel');q.innerHTML='';
+  if(!cfg.escanerUrl){$('#celInstr').textContent='Falta publicar la página del escáner y poner su dirección en Code.gs (escanerUrl).';$('#celNota').textContent='';$('#celModal').hidden=false;return}
+  const sep=cfg.escanerUrl.includes('?')?'&':'?';
+  const url=cfg.escanerUrl+sep+'api='+encodeURIComponent(cfg.apiUrl)+'&pin='+encodeURIComponent(pin)+'&caja='+CAJA+'&n='+encodeURIComponent(cfg.comercio);
+  if(window.QRCode)new QRCode(q,{text:url,width:220,height:220,correctLevel:QRCode.CorrectLevel.L});
+  $('#celInstr').textContent='Escaneá este código con la cámara del celular. Se abre el escáner ya conectado a esta caja.';
+  $('#celNota').textContent='El celu queda vinculado: la próxima vez abrís el escáner directo, sin este paso.';
+  $('#celModal').hidden=false};
+$('#celCerrar').onclick=()=>{$('#celModal').hidden=true;scan.focus()};
+</script>
+</body>
+</html>
