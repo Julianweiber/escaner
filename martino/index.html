@@ -336,6 +336,14 @@ select:focus{outline:none;border-color:var(--azul);box-shadow:0 0 0 3px var(--az
       <div><label class="label" for="barInput">Código de barras</label><input id="barInput" class="codigo" inputmode="numeric" placeholder="Escaneá o escribí"></div>
       <div><label class="label" for="barRapido">Código rápido</label><input id="barRapido" class="codigo" placeholder="Ej: C48" maxlength="12" style="text-transform:uppercase"></div>
     </div>
+    <div id="fracBox" style="border:1px dashed var(--line,#ccd);border-radius:12px;padding:10px 12px">
+      <b style="font-size:14px">Vender por unidad (fraccionar)</b>
+      <div id="fracInfo" style="font-size:13px;color:var(--muted);margin:4px 0 8px">Si este producto es un paquete, se crea otro "por unidad" con el precio calculado solo.</div>
+      <div class="row2"><div><label class="label" for="fracU">Unidades que trae</label><input id="fracU" inputmode="numeric" placeholder="Ej: 12"></div>
+        <div><label class="label" for="fracM">Margen %</label><input id="fracM" inputmode="numeric" placeholder="El mismo"></div></div>
+      <div id="fracPrev" style="font-size:14px;margin:8px 0;font-weight:600"></div>
+      <button class="btn ghost small" type="button" id="fracOk">Crear producto por unidad</button>
+    </div>
     <div id="barErr" class="err" hidden></div>
     <div class="row2"><button class="btn ghost" type="button" id="barCancelar">Cancelar</button><button class="btn" type="submit" id="barGuardar">Guardar</button></div>
     <button class="btn ghost small" type="button" id="barBorrar" style="color:var(--bad)">Borrar producto</button>
@@ -694,7 +702,22 @@ function editarBarras(p){if(!p)return;barProd=p;
   $('#eCosto').value=p.costo?Math.round(p.costo):'';$('#ePrecio').value=p.precio>0?Math.round(p.precio):'';
   $('#barInput').value=p.barras||'';$('#barRapido').value=p.rapido||'';$('#barErr').hidden=true;
   $('#barGuardar').disabled=false;$('#barGuardar').textContent='Guardar';$('#barBorrar').disabled=false;$('#barBorrar').textContent='Borrar producto';
+  const hijo=productos.find(x=>x.paquete===p.codigo);$('#fracBox').hidden=!!p.paquete;
+  const m0=(p.nombre.match(/x\s*(\d{1,3})/i)||[])[1];$('#fracU').value=hijo?hijo.uxp:(m0&&+m0>1?m0:'');$('#fracM').value='';
+  $('#fracInfo').textContent=hijo?'Ya se vende por unidad: '+hijo.nombre+' a '+ars(hijo.precio)+'. Podés cambiar las unidades o el margen y actualizarlo.':'Si este producto es un paquete, se crea otro "por unidad" con el precio calculado solo.';
+  $('#fracOk').textContent=hijo?'Actualizar precio por unidad':'Crear producto por unidad';$('#fracOk').disabled=false;fracPrev();
   $('#results').hidden=true;$('#barModal').hidden=false;$('#eNombre').focus()}
+function fracPrev(){const p=barProd;if(!p)return;const u=num($('#fracU').value),co=num($('#eCosto').value)||p.costo||0;
+  const m=$('#fracM').value.trim()===''?(p.margen!=null&&p.margen!==''?Number(p.margen):1):num($('#fracM').value)/100;
+  $('#fracPrev').textContent=!co?'Cargale el costo del paquete para calcular.':u>1?`Costo x unidad ${ars(Math.round(co/u))} · Precio x unidad ${ars(Math.max(10,Math.round(co/u*(1+m)/10)*10))}`:''}
+['#fracU','#fracM','#eCosto'].forEach(s=>$(s).addEventListener('input',fracPrev));
+$('#fracOk').onclick=()=>{const p=barProd,b=$('#fracOk'),u=num($('#fracU').value);
+  if(!(u>1))return barErr('Poné cuántas unidades trae el paquete.');if(!(num($('#eCosto').value)||p.costo))return barErr('Primero cargale el costo del paquete y guardá.');
+  b.disabled=true;b.textContent='Creando…';
+  google.script.run.withSuccessHandler(h=>{const i=productos.findIndex(x=>x.codigo===h.codigo);if(i>=0)Object.assign(productos[i],h);else productos.push(h);p.uxp=u;
+      b.disabled=false;$('#fracInfo').textContent='Listo: '+h.nombre+' a '+ars(h.precio)+'. Ya lo podés buscar y vender.';b.textContent='Actualizar precio por unidad'})
+    .withFailureHandler(err=>{b.disabled=false;b.textContent='Crear producto por unidad';barErr((err&&err.message)||String(err))})
+    .fraccionarProducto(pin,p.codigo,u,$('#fracM').value.trim())};
 $('#lookup').onclick=e=>{const b=e.target.closest('[data-bar]');if(b)editarBarras(prod(b.dataset.bar))};
 $('#barCancelar').onclick=()=>{$('#barModal').hidden=true;scan.focus()};
 const barErr=t=>{$('#barErr').textContent=t;$('#barErr').hidden=false};
