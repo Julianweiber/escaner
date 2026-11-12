@@ -52,6 +52,7 @@ input:focus{outline:none;border-color:var(--azul);box-shadow:0 0 0 3px var(--azu
 .seg button{background:transparent;padding:8px 14px;border-radius:9px;font-weight:600;color:var(--muted)}
 .seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 .results{border:1px solid var(--line);border-radius:12px;overflow:hidden auto;max-height:60vh}
+#barModal{z-index:11}
 .rcount{font-size:12px;color:var(--muted);padding:6px 12px;border-bottom:1px solid var(--line)}
 .results button{all:unset;cursor:pointer;display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border-top:1px solid var(--line);width:calc(100% - 24px)}
 .results button:first-child{border-top:0}
@@ -757,7 +758,7 @@ $('#barForm').onsubmit=e=>{e.preventDefault();const p=barProd,b=$('#barGuardar')
   const cambios={};Object.keys(n).forEach(k=>{if(String(n[k])!==String(viejo[k]))cambios[k]=n[k]});
   if(!Object.keys(cambios).length){$('#barModal').hidden=true;scan.focus();return}
   b.disabled=true;b.textContent='Guardando…';
-  google.script.run.withSuccessHandler(()=>{if('stockHoy' in cambios){p.stock=cambios.stockHoy;delete cambios.stockHoy}Object.assign(p,cambios);syncHijos(p);$('#barModal').hidden=true;render();if(modo==='consulta')agregar(p);scan.value='';scan.focus()})
+  google.script.run.withSuccessHandler(()=>{if('stockHoy' in cambios){p.stock=cambios.stockHoy;delete cambios.stockHoy}Object.assign(p,cambios);syncHijos(p);$('#barModal').hidden=true;render();if(!$('#precModal').hidden){dibujarPrecios();return}if(modo==='consulta')agregar(p);scan.value='';scan.focus()})
     .withFailureHandler(err=>{b.disabled=false;b.textContent='Guardar';barErr((err&&err.message)||String(err))})
     .editarProducto(pin,p.codigo,cambios)};
 $('#barInput').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('#barRapido').focus()}};
@@ -765,7 +766,7 @@ $('#barBorrar').onclick=()=>{const p=barProd,b=$('#barBorrar');
   if(!confirm('¿Borrar "'+p.nombre+'" de la lista de productos? No se puede deshacer.'))return;
   b.disabled=true;b.textContent='Borrando…';
   google.script.run.withSuccessHandler(()=>{productos=productos.filter(x=>x!==p);carrito=carrito.filter(c=>c.codigo!==p.codigo);
-      $('#barModal').hidden=true;$('#lookup').innerHTML='';render();scan.value='';scan.focus()})
+      $('#barModal').hidden=true;$('#lookup').innerHTML='';render();if(!$('#precModal').hidden){dibujarPrecios();return}scan.value='';scan.focus()})
     .withFailureHandler(err=>{b.disabled=false;b.textContent='Borrar producto';barErr((err&&err.message)||String(err))})
     .borrarProducto(pin,p.codigo)};
 
@@ -820,13 +821,14 @@ function dibujarPrecios(){precFiltro=filtrarPrecios();const vis0=new Set(precFil
   const n=Object.keys(pend).length;$('#precGuardar').disabled=!n;$('#precGuardar').textContent=n?'Guardar cambios ('+n+')':'Guardar cambios';
   const vis=precFiltro.slice(0,250);
   $('#precBody').innerHTML=vis.map(p=>{const pr=val(p,'precio'),co=val(p,'costo'),mg=val(p,'margen');
-    return`<tr data-c="${esc(p.codigo)}" class="${pend[p.codigo]?'mod':''} ${pr>0?'':'cero'}"><td><input type="checkbox" class="selp" ${sel.has(p.codigo)?'checked':''} style="width:18px;height:18px"></td><td>${esc(p.nombre)}<br><small>${esc(p.categoria||'')}${val(p,'marca')?' · <b>'+esc(val(p,'marca'))+'</b>':''}${p.proveedor?' · '+esc(p.proveedor):''}</small></td>
+    return`<tr data-c="${esc(p.codigo)}" class="${pend[p.codigo]?'mod':''} ${pr>0?'':'cero'}"><td><input type="checkbox" class="selp" ${sel.has(p.codigo)?'checked':''} style="width:18px;height:18px"></td><td><button class="ledit" data-ed="${esc(p.codigo)}" title="Editar producto">${esc(p.nombre)} <span>✎</span></button><br><small>${esc(p.categoria||'')}${val(p,'marca')?' · <b>'+esc(val(p,'marca'))+'</b>':''}${p.proveedor?' · '+esc(p.proveedor):''}</small></td>
     <td><input data-k="costo" value="${co?Math.round(co):''}" inputmode="numeric"></td>
     <td><input data-k="margen" value="${mg!=null&&co?Math.round(mg*100):''}" inputmode="numeric"></td>
     <td><input class="pr" data-k="precio" value="${pr>0?Math.round(pr):''}" inputmode="numeric" placeholder="$"></td></tr>`}).join('')||'<tr><td class="empty" colspan="5">No hay productos con ese filtro.</td></tr>';
   if(precFiltro.length>250)$('#precBody').insertAdjacentHTML('beforeend',`<tr><td colspan="5" class="sub">Se muestran 250 de ${precFiltro.length}. Usá el buscador o los filtros para ver el resto (los botones de arriba aplican a todos).</td></tr>`)}
 function cambiar(p,k,v){pend[p.codigo]=Object.assign(pend[p.codigo]||{},{[k]:v})}
 ['#precQ','#precCat','#precMarca','#precProv','#precSin'].forEach(s=>$(s).addEventListener(s==='#precQ'?'input':'change',dibujarPrecios));
+$('#precBody').addEventListener('click',e=>{const ed=e.target.closest('[data-ed]');if(ed)editarBarras(prod(ed.dataset.ed))});
 $('#precQ').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const i=$('#precBody input.pr');if(i){i.focus();i.select()}}};
 $('#precBody').addEventListener('change',e=>{const ck=e.target.closest('.selp');
   if(ck){const c=ck.closest('tr').dataset.c;ck.checked?sel.add(c):sel.delete(c);$('#precN').textContent=objetivo().length;$('#precQue').textContent=sel.size?'seleccionados':'filtrados';return}const i=e.target.closest('input[data-k]');if(!i)return;
