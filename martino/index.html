@@ -52,6 +52,7 @@ input:focus{outline:none;border-color:var(--azul);box-shadow:0 0 0 3px var(--azu
 .seg button{background:transparent;padding:8px 14px;border-radius:9px;font-weight:600;color:var(--muted)}
 .seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 .results{border:1px solid var(--line);border-radius:12px;overflow:hidden auto;max-height:60vh}
+.rcount{font-size:12px;color:var(--muted);padding:6px 12px;border-bottom:1px solid var(--line)}
 .results button{all:unset;cursor:pointer;display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border-top:1px solid var(--line);width:calc(100% - 24px)}
 .results button:first-child{border-top:0}
 .results button:hover{background:var(--azul-soft)}
@@ -457,8 +458,19 @@ function resumen(){google.script.run.withSuccessHandler(r=>{$('#day').textConten
 function mostrarError(e){const b=$('#error');b.textContent=(e&&e.message)||String(e);b.hidden=false;clearTimeout(b._t);b._t=setTimeout(()=>b.hidden=true,5000)}
 const prod=c=>productos.find(p=>p.codigo===c);
 const porCodigo=c=>{c=String(c||'').trim();const u=c.toUpperCase();return productos.find(p=>p.codigo===c||(p.barras&&p.barras===c)||(p.rapido&&p.rapido===u))};
-function buscar(q){q=q.trim();if(!q)return[];const ex=porCodigo(q);if(ex)return[ex];const ws=sinTildes(q).split(/\s+/).filter(Boolean);
-  return productos.filter(p=>{const n=sinTildes(p.nombre);return ws.every(w=>n.includes(w))}).slice(0,25)}
+// Buscador: por palabras sueltas, en cualquier orden, sin tildes, tolera plurales y "x unidad"/"por unidad"/"xunidad".
+const VACIAS=new Set(['x','de','del','la','el','los','las','con','por','para','y','en','p']);
+const normBus=s=>' '+sinTildes(s).replace(/\b(?:x|por)\s*unid(?:ad|ades|\.)?\b/g,' unidad ').replace(/\bunidades\b/g,'unidad').replace(/[^a-z0-9ñ]+/g,' ').trim()+' ';
+const raiz=w=>w.length>4&&/es$/.test(w)?w.slice(0,-2):w.length>3&&/s$/.test(w)?w.slice(0,-1):w;
+function puntaje(t,w){if(t.includes(' '+w+' '))return 3;if(t.includes(' '+w))return 2;if(t.includes(w))return 1;const r=raiz(w);return r!==w&&t.includes(' '+r)?2:0}
+function buscar(q,todos){q=q.trim();if(!q)return[];const ex=porCodigo(q);if(ex)return[ex];
+  let ws=normBus(q).trim().split(' ').filter(Boolean);const sin=ws.filter(w=>!VACIAS.has(w));if(sin.length)ws=sin;if(!ws.length)return[];
+  const res=[];productos.forEach(p=>{const t=normBus(p.nombre),t2=t+normBus([p.marca,p.categoria,p.codigo].join(' '));
+    let s=0,ok=0;ws.forEach(w=>{const v=puntaje(t,w)||Math.min(1,puntaje(t2,w));if(v){ok++;s+=v}});
+    if(ok)res.push({p,ok,s:s+(t.startsWith(' '+ws[0])?2:0)})});
+  const max=Math.max(0,...res.map(r=>r.ok));
+  // Primero los que tienen todas las palabras; si ninguno, los que tienen más palabras (por si hay un error de tipeo).
+  return res.filter(r=>r.ok===max&&(max===ws.length||max>=Math.ceil(ws.length/2))).sort((a,b)=>b.s-a.s||String(a.p.nombre).localeCompare(String(b.p.nombre),'es',{numeric:true})).map(r=>r.p).slice(0,todos?1e9:200)}
 
 /* ---------- Ticket ---------- */
 let resaltar=null;
@@ -518,7 +530,7 @@ scan.addEventListener('keydown',e=>{if(e.key!=='Enter')return;e.preventDefault()
   else if(/^\d{4,}$/.test(v)){scan.value='';$('#results').hidden=true;pedirAlta(v)}
   else{scan.value='';$('#results').hidden=true;abrirAlta('',v)}});
 scan.addEventListener('input',()=>{const q=scan.value.trim(),r=buscar(q),box=$('#results');if(q.length<2||/^\d+$/.test(q)){box.hidden=true;return}
-  box.innerHTML=r.map(p=>`<div class="rrow"><button data-c="${esc(p.codigo)}">${p.imagen?`<img class="thumb" src="${esc(p.imagen)}" alt="" loading="lazy">`:'<i class="thumb"></i>'}<span>${esc(p.nombre)}</span><b>${p.precio>0?ars(p.precio):'sin precio'}</b></button><button class="bar" data-bar="${esc(p.codigo)}" title="Editar o borrar el producto">✎ Editar</button></div>`).join('')+`<div class="rrow"><button data-crear="1" style="color:var(--azul);font-weight:700"><span>+ Crear "${esc(q)}"</span><b></b></button></div>`;box.hidden=false});
+  box.innerHTML=`<div class="rcount">${r.length?r.length+(r.length>=200?'+':'')+' resultado'+(r.length===1?'':'s'):'Sin resultados'}</div>`+r.map(p=>`<div class="rrow"><button data-c="${esc(p.codigo)}">${p.imagen?`<img class="thumb" src="${esc(p.imagen)}" alt="" loading="lazy">`:'<i class="thumb"></i>'}<span>${esc(p.nombre)}</span><b>${p.precio>0?ars(p.precio):'sin precio'}</b></button><button class="bar" data-bar="${esc(p.codigo)}" title="Editar o borrar el producto">✎ Editar</button></div>`).join('')+`<div class="rrow"><button data-crear="1" style="color:var(--azul);font-weight:700"><span>+ Crear "${esc(q)}"</span><b></b></button></div>`;box.hidden=false});
 $('#results').onclick=e=>{if(e.target.closest('[data-crear]')){const q=scan.value.trim();scan.value='';$('#results').hidden=true;abrirAlta('',q);return}
   const bb=e.target.closest('[data-bar]');if(bb){editarBarras(prod(bb.dataset.bar));return}
   const b=e.target.closest('[data-c]');if(!b)return;agregar(prod(b.dataset.c));scan.value='';$('#results').hidden=true;scan.focus()};
