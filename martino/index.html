@@ -83,7 +83,9 @@ td.n{font-family:var(--mono);text-align:right;white-space:nowrap}
 .lookup .m{font:13px var(--mono);opacity:.85}
 .err{background:var(--bad-soft);color:var(--bad);border-radius:12px;padding:10px 12px;font-weight:600}
 .modal{position:fixed;inset:0;background:rgba(10,15,30,.55);display:grid;place-items:center;padding:16px;z-index:10}
-.box{background:#fff;border-radius:18px;padding:22px;width:360px;max-width:100%;display:flex;flex-direction:column;gap:12px}
+.box{background:#fff;border-radius:18px;padding:22px;width:360px;max-width:100%;display:flex;flex-direction:column;gap:12px;max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain}
+.modal{overflow-y:auto}
+#barForm .row2:last-of-type{position:sticky;bottom:-22px;background:#fff;padding:10px 0 6px;margin-bottom:-6px}
 .box h2{margin:0;font:800 20px var(--display)}
 .box p{margin:0;color:var(--muted);font-size:14px}
 #pinInput{font:700 26px var(--mono);text-align:center;letter-spacing:.3em}
