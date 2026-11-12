@@ -170,6 +170,7 @@ select:focus{outline:none;border-color:var(--azul);box-shadow:0 0 0 3px var(--az
 .pedit{background:none;border:0;font:inherit;color:inherit;cursor:pointer;text-align:right;padding:2px 4px;border-radius:6px}.pedit:hover{background:#0001}.pedit small{display:block;font-size:11px;opacity:.7}
 .results button[data-c] span{flex:1;align-self:center}.results button[data-c] b{align-self:center}
 .thumb{width:40px;height:40px;object-fit:contain;border-radius:8px;background:#fff;flex:none;margin-right:10px;display:inline-block}
+.ledit{background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}.ledit span{font-size:12px;color:var(--muted);opacity:.7}.ledit:hover{text-decoration:underline}
 </style>
 </head>
 <body>
@@ -330,6 +331,7 @@ select:focus{outline:none;border-color:var(--azul);box-shadow:0 0 0 3px var(--az
       <div><label class="label" for="eProveedor">Proveedor</label><select id="eProveedor"></select></div>
       <div><label class="label" for="eMinimo">Stock mínimo</label><input id="eMinimo" inputmode="numeric"></div>
     </div>
+    <div><label class="label" for="eStock">Stock que hay hoy</label><input id="eStock" inputmode="numeric" placeholder="Contá y poné cuántos hay" style="margin-top:6px"></div>
     <div class="row2">
       <div><label class="label" for="eCosto">Costo</label><input id="eCosto" inputmode="numeric" placeholder="$"></div>
       <div><label class="label" for="ePrecio">Precio de venta</label><input id="ePrecio" inputmode="numeric" placeholder="$"></div>
@@ -445,7 +447,7 @@ $('#pinForm').addEventListener('submit',e=>{e.preventDefault();const p=$('#pinIn
 function iniciar(){cargar();$('#scan').focus();escuchar()}
 
 /* ---------- Datos ---------- */
-function cargar(cb){google.script.run.withSuccessHandler(d=>{cfg=d.config;productos=d.productos;
+function cargar(cb){google.script.run.withSuccessHandler(d=>{cfg=d.config;cfg.margenes=d.margenes||{};productos=d.productos;
   clientes=d.clientes||[];categorias=d.categorias||[];proveedores=d.proveedores||[];
   if(cliente)cliente=clientes.find(c=>c.nombre===cliente.nombre)||cliente;
   $('#comercio').textContent=cfg.comercio;$('#direccion').textContent=cfg.direccion+' · '+productos.length+' artículos';
@@ -472,7 +474,7 @@ const conMedio=()=>carrito.reduce((s,c)=>s+Math.round(pu(c)*(1+pctMedio(medio)/1
 const total=()=>carrito.reduce((s,c)=>s+Math.round(pu(c)*(1+pctMedio(medio)/100)*(1+extra()/100))*c.cantidad,0);
 const etiqPct=p=>p?(p>0?'+':'−')+Math.abs(p)+'%':'';
 function render(){
-  $('#lineas').innerHTML=carrito.length?carrito.map(c=>{const p=prod(c.codigo);return`<tr class="${c.codigo===resaltar?'nuevo':''}"><td>${p.nombre}${p.stock>0&&p.stock-c.cantidad<0?' <small style="color:var(--bad)">sin stock</small>':''}</td><td><span class="qty"><button data-d="-1" data-c="${c.codigo}">−</button>${c.cantidad}<button data-d="1" data-c="${c.codigo}">+</button></span></td><td class="n"><button class="pedit" data-pr="${c.codigo}" title="Cambiar precio solo en esta venta">${ars(pu(c)*c.cantidad)}${c.cantidad>1||c.precio?`<small>${ars(pu(c))} c/u${c.precio?' ✎':''}</small>`:''}</button></td></tr>`}).join(''):'<tr><td class="empty">Escaneá el primer artículo, con la lectora o con el celular</td></tr>';
+  $('#lineas').innerHTML=carrito.length?carrito.map(c=>{const p=prod(c.codigo);return`<tr class="${c.codigo===resaltar?'nuevo':''}"><td><button class="ledit" data-ed="${esc(c.codigo)}" title="Editar producto">${esc(p.nombre)} <span>✎</span></button>${p.stock>0&&p.stock-c.cantidad<0?' <small style="color:var(--bad)">sin stock</small>':''}</td><td><span class="qty"><button data-d="-1" data-c="${c.codigo}">−</button>${c.cantidad}<button data-d="1" data-c="${c.codigo}">+</button></span></td><td class="n"><button class="pedit" data-pr="${c.codigo}" title="Cambiar precio solo en esta venta">${ars(pu(c)*c.cantidad)}${c.cantidad>1||c.precio?`<small>${ars(pu(c))} c/u${c.precio?' ✎':''}</small>`:''}</button></td></tr>`}).join(''):'<tr><td class="empty">Escaneá el primer artículo, con la lectora o con el celular</td></tr>';
   resaltar=null;
   $('#editBox').hidden=!editando;
   const t=total(),faltaCli=medio==='Fiado'&&!cliente,pm=pctMedio(medio);
@@ -520,7 +522,8 @@ scan.addEventListener('input',()=>{const q=scan.value.trim(),r=buscar(q),box=$('
 $('#results').onclick=e=>{if(e.target.closest('[data-crear]')){const q=scan.value.trim();scan.value='';$('#results').hidden=true;abrirAlta('',q);return}
   const bb=e.target.closest('[data-bar]');if(bb){editarBarras(prod(bb.dataset.bar));return}
   const b=e.target.closest('[data-c]');if(!b)return;agregar(prod(b.dataset.c));scan.value='';$('#results').hidden=true;scan.focus()};
-$('#lineas').onclick=e=>{const pr=e.target.closest('[data-pr]');
+$('#lineas').onclick=e=>{const ed=e.target.closest('[data-ed]');if(ed){editarBarras(prod(ed.dataset.ed));return}
+  const pr=e.target.closest('[data-pr]');
   if(pr){const it=carrito.find(c=>c.codigo===pr.dataset.pr),td=pr.parentNode;
     td.innerHTML=`<input class="input" type="number" inputmode="numeric" min="1" value="${pu(it)}" style="width:110px;text-align:right" title="Precio por unidad">`;
     const inp=td.firstChild;inp.focus();inp.select();let hecho=false;
@@ -586,7 +589,7 @@ function pedirAlta(codigo){
     return}
   abrirAlta(codigo)}
 function abrirAlta(codigo,nombre){
-  $('#prodForm').reset();$('#prodErr').hidden=true;$('#pMargen').textContent='';
+  $('#prodForm').reset();$('#prodErr').hidden=true;$('#pMargen').textContent='';precioManual=false;
   opciones($('#pCategoria'),categorias.length?categorias:['General']);
   opciones($('#pProveedor'),proveedores,'Sin proveedor');
   $('#pCodigo').value=codigo||'';$('#prodTag').hidden=!codigo;$('#pNombre').value=nombre||'';$('#pMarca').value='';$('#marcasList').innerHTML=marcasAct().map(m=>`<option value="${esc(m)}">`).join('');
@@ -597,9 +600,14 @@ function abrirAlta(codigo,nombre){
 function cerrarAlta(){$('#prodModal').hidden=true;const sig=altas.shift();if(sig&&!porCodigo(sig))abrirAlta(sig);else scan.focus()}
 $('#btnProducto').onclick=()=>abrirAlta('');
 $('#prodCancelar').onclick=cerrarAlta;
-function margen(){const c=num($('#pCosto').value),p=num($('#pPrecio').value);
-  $('#pMargen').textContent=c&&p?`Ganancia ${ars(p-c)} por unidad (${Math.round((p/c-1)*100)}% sobre el costo)`:c?'Con 60% de margen sería '+ars(Math.round(c*1.6/10)*10):''}
-$('#pCosto').oninput=$('#pPrecio').oninput=margen;
+let precioManual=false;
+const margenCat=c=>{const m=(cfg.margenes||{})[c];return m>=0?m:null};
+function margen(){const c=num($('#pCosto').value),m=margenCat($('#pCategoria').value);
+  if(c&&m!==null&&!precioManual)$('#pPrecio').value=Math.max(10,Math.round(c*(1+m)/10)*10);
+  const p=num($('#pPrecio').value);
+  $('#pMargen').textContent=c&&p?`Ganancia ${ars(p-c)} por unidad (${Math.round((p/c-1)*100)}% sobre el costo)`+(m!==null&&!precioManual?` · sugerido con el ${Math.round(m*100)}% de ${$('#pCategoria').value}`:''):c&&m===null?'Esta categoría no tiene margen cargado: poné el precio a mano.':''}
+$('#pCosto').oninput=margen;$('#pCategoria').onchange=margen;
+$('#pPrecio').oninput=()=>{precioManual=$('#pPrecio').value.trim()!=='';margen()};
 $('#pCodigo').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const c=$('#pCodigo').value.trim();
   if(porCodigo(c)){$('#prodErr').textContent='Ese código ya está cargado: '+porCodigo(c).nombre;$('#prodErr').hidden=false;return}$('#pNombre').focus()}};
 $('#prodForm').onsubmit=e=>{e.preventDefault();
@@ -700,7 +708,7 @@ function editarBarras(p){if(!p)return;barProd=p;
   opciones($('#eCategoria'),[...new Set([p.categoria,...categorias].filter(Boolean))]);$('#eCategoria').value=p.categoria||'';
   opciones($('#eProveedor'),proveedores,'Sin proveedor');$('#eProveedor').value=p.proveedor||'';
   $('#marcasList').innerHTML=marcasAct().map(m=>`<option value="${esc(m)}">`).join('');
-  $('#eNombre').value=p.nombre||'';$('#eMarca').value=p.marca||'';$('#eMinimo').value=p.minimo||'';
+  $('#eNombre').value=p.nombre||'';$('#eMarca').value=p.marca||'';$('#eMinimo').value=p.minimo||'';$('#eStock').value=Math.round(p.stock||0);
   $('#eCosto').value=p.costo?Math.round(p.costo):'';$('#ePrecio').value=p.precio>0?Math.round(p.precio):'';
   $('#barInput').value=p.barras||'';$('#barRapido').value=p.rapido||'';$('#barErr').hidden=true;
   $('#barGuardar').disabled=false;$('#barGuardar').textContent='Guardar';$('#barBorrar').disabled=false;$('#barBorrar').textContent='Borrar producto';
@@ -725,17 +733,17 @@ $('#barCancelar').onclick=()=>{$('#barModal').hidden=true;scan.focus()};
 const barErr=t=>{$('#barErr').textContent=t;$('#barErr').hidden=false};
 $('#barForm').onsubmit=e=>{e.preventDefault();const p=barProd,b=$('#barGuardar');
   const n={nombre:$('#eNombre').value.trim(),categoria:$('#eCategoria').value,marca:$('#eMarca').value.trim(),proveedor:$('#eProveedor').value,
-    minimo:num($('#eMinimo').value),costo:num($('#eCosto').value),precio:num($('#ePrecio').value),
+    minimo:num($('#eMinimo').value),stockHoy:Math.round(Number(String($('#eStock').value).replace(',','.'))||0),costo:num($('#eCosto').value),precio:num($('#ePrecio').value),
     barras:$('#barInput').value.trim(),rapido:$('#barRapido').value.trim().toUpperCase()};
   if(!n.nombre)return barErr('Escribí el nombre.');
   const igual=productos.find(x=>x!==p&&sinTildes(x.nombre).trim()===sinTildes(n.nombre).trim());if(igual)return barErr('Ya existe otro producto llamado "'+igual.nombre+'".');
   const otro=n.barras&&productos.find(x=>x!==p&&(x.barras===n.barras||x.codigo===n.barras));if(otro)return barErr('Ese código de barras ya es de "'+otro.nombre+'".');
   const otroR=n.rapido&&productos.find(x=>x!==p&&x.rapido===n.rapido);if(otroR)return barErr('El código rápido '+n.rapido+' ya es de "'+otroR.nombre+'".');
-  const viejo={nombre:p.nombre||'',categoria:p.categoria||'',marca:p.marca||'',proveedor:p.proveedor||'',minimo:Number(p.minimo)||0,costo:Math.round(p.costo||0),precio:Math.round(p.precio||0),barras:p.barras||'',rapido:p.rapido||''};
+  const viejo={stockHoy:Math.round(p.stock||0),nombre:p.nombre||'',categoria:p.categoria||'',marca:p.marca||'',proveedor:p.proveedor||'',minimo:Number(p.minimo)||0,costo:Math.round(p.costo||0),precio:Math.round(p.precio||0),barras:p.barras||'',rapido:p.rapido||''};
   const cambios={};Object.keys(n).forEach(k=>{if(String(n[k])!==String(viejo[k]))cambios[k]=n[k]});
   if(!Object.keys(cambios).length){$('#barModal').hidden=true;scan.focus();return}
   b.disabled=true;b.textContent='Guardando…';
-  google.script.run.withSuccessHandler(()=>{Object.assign(p,cambios);$('#barModal').hidden=true;render();if(modo==='consulta')agregar(p);scan.value='';scan.focus()})
+  google.script.run.withSuccessHandler(()=>{if('stockHoy' in cambios){p.stock=cambios.stockHoy;delete cambios.stockHoy}Object.assign(p,cambios);$('#barModal').hidden=true;render();if(modo==='consulta')agregar(p);scan.value='';scan.focus()})
     .withFailureHandler(err=>{b.disabled=false;b.textContent='Guardar';barErr((err&&err.message)||String(err))})
     .editarProducto(pin,p.codigo,cambios)};
 $('#barInput').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('#barRapido').focus()}};
