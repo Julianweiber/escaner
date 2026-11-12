@@ -311,6 +311,13 @@ select:focus{outline:none;border-color:var(--azul);box-shadow:0 0 0 3px var(--az
       <div><label class="label" for="pPrecio">Precio de venta</label><input id="pPrecio" inputmode="numeric" placeholder="$"></div>
     </div>
     <div class="hint" id="pMargen"></div>
+    <div style="border:1px dashed var(--line,#ccd);border-radius:12px;padding:10px 12px">
+      <label style="display:flex;gap:8px;align-items:center;font-weight:600;font-size:14px"><input type="checkbox" id="pFrac" style="width:18px;height:18px"> Es un paquete y también se vende por unidad</label>
+      <div id="pFracBox" hidden style="margin-top:8px">
+        <div><label class="label" for="pFracU">Unidades que trae</label><input id="pFracU" inputmode="numeric" placeholder="Ej: 12"></div>
+        <div class="hint" id="pFracPrev" style="margin-top:6px"></div>
+      </div>
+    </div>
     <div class="row2">
       <div><label class="label" for="pStock">Stock que hay hoy</label><input id="pStock" inputmode="numeric" placeholder="0"></div>
       <div><label class="label" for="pMinimo">Avisar cuando queden</label><input id="pMinimo" inputmode="numeric" placeholder="0"></div>
@@ -602,7 +609,7 @@ function pedirAlta(codigo){
     return}
   abrirAlta(codigo)}
 function abrirAlta(codigo,nombre){
-  $('#prodForm').reset();$('#prodErr').hidden=true;$('#pMargen').textContent='';precioManual=false;
+  $('#prodForm').reset();$('#prodErr').hidden=true;$('#pMargen').textContent='';precioManual=false;$('#pFracBox').hidden=true;$('#pFracPrev').textContent='';
   opciones($('#pCategoria'),categorias.length?categorias:['General']);
   opciones($('#pProveedor'),proveedores,'Sin proveedor');
   $('#pCodigo').value=codigo||'';$('#prodTag').hidden=!codigo;$('#pNombre').value=nombre||'';$('#pMarca').value='';$('#marcasList').innerHTML=marcasAct().map(m=>`<option value="${esc(m)}">`).join('');
@@ -619,8 +626,13 @@ function margen(){const c=num($('#pCosto').value),m=margenCat($('#pCategoria').v
   if(c&&m!==null&&!precioManual)$('#pPrecio').value=Math.max(10,Math.round(c*(1+m)/10)*10);
   const p=num($('#pPrecio').value);
   $('#pMargen').textContent=c&&p?`Ganancia ${ars(p-c)} por unidad (${Math.round((p/c-1)*100)}% sobre el costo)`+(m!==null&&!precioManual?` · sugerido con el ${Math.round(m*100)}% de ${$('#pCategoria').value}`:''):c&&m===null?'Esta categoría no tiene margen cargado: poné el precio a mano.':''}
-$('#pCosto').oninput=margen;$('#pCategoria').onchange=margen;
-$('#pPrecio').oninput=()=>{precioManual=$('#pPrecio').value.trim()!=='';margen()};
+function pFracPrev(){if($('#pFracBox').hidden)return;const u=num($('#pFracU').value),c=num($('#pCosto').value),p=num($('#pPrecio').value),m=c&&p?p/c-1:1;
+  $('#pFracPrev').textContent=!c?'Poné el costo del paquete para calcular el precio por unidad.':u>1?`Se crea también "${$('#pNombre').value.trim()||'…'} (x unidad)": costo ${ars(Math.round(c/u))} · precio ${ars(Math.max(10,Math.round(c/u*(1+m)/10)*10))}`:'Poné cuántas unidades trae.'}
+$('#pFrac').onchange=()=>{const on=$('#pFrac').checked;$('#pFracBox').hidden=!on;
+  if(on&&!$('#pFracU').value){const m0=($('#pNombre').value.match(/x\s*(\d{1,3})/i)||[])[1];if(m0&&+m0>1)$('#pFracU').value=m0}pFracPrev();if(on)$('#pFracU').focus()};
+['#pFracU','#pNombre'].forEach(s=>$(s).addEventListener('input',pFracPrev));
+$('#pCosto').oninput=()=>{margen();pFracPrev()};$('#pCategoria').onchange=()=>{margen();pFracPrev()};
+$('#pPrecio').oninput=()=>{precioManual=$('#pPrecio').value.trim()!=='';margen();pFracPrev()};
 $('#pCodigo').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const c=$('#pCodigo').value.trim();
   if(porCodigo(c)){$('#prodErr').textContent='Ese código ya está cargado: '+porCodigo(c).nombre;$('#prodErr').hidden=false;return}$('#pNombre').focus()}};
 $('#prodForm').onsubmit=e=>{e.preventDefault();
@@ -628,14 +640,20 @@ $('#prodForm').onsubmit=e=>{e.preventDefault();
     costo:num($('#pCosto').value),precio:num($('#pPrecio').value),stock:num($('#pStock').value),minimo:num($('#pMinimo').value),rapido:$('#pRapido').value.trim().toUpperCase()};
   const igual=productos.find(p=>sinTildes(p.nombre).trim()===sinTildes(d.nombre).trim());
   const usadoR=d.rapido&&porCodigo(d.rapido);
-  const err=d.codigo&&porCodigo(d.codigo)?'Ese código ya está cargado: '+porCodigo(d.codigo).nombre:!d.nombre?'Escribí el nombre del producto.':igual?'Ya existe "'+igual.nombre+'". Usá "¿Es un producto que ya está cargado?" arriba, o cambiá el nombre.':usadoR?'El código rápido '+d.rapido+' ya es de "'+usadoR.nombre+'".':!d.precio?'Poné el precio de venta.':'';
+  const frac=$('#pFrac').checked,fracU=num($('#pFracU').value);
+  const err=d.codigo&&porCodigo(d.codigo)?'Ese código ya está cargado: '+porCodigo(d.codigo).nombre:!d.nombre?'Escribí el nombre del producto.':igual?'Ya existe "'+igual.nombre+'". Usá "¿Es un producto que ya está cargado?" arriba, o cambiá el nombre.':usadoR?'El código rápido '+d.rapido+' ya es de "'+usadoR.nombre+'".':!d.precio?'Poné el precio de venta.':frac&&!(fracU>1)?'Poné cuántas unidades trae el paquete.':frac&&!d.costo?'Para venderlo por unidad poné el costo del paquete.':'';
   if(err){$('#prodErr').textContent=err;$('#prodErr').hidden=false;return}
   const b=$('#prodGuardar');b.disabled=true;b.textContent='Guardando…';
   google.script.run.withSuccessHandler(p=>{b.disabled=false;b.textContent='Guardar';
-    productos.push({codigo:p.codigo,barras:d.codigo,rapido:d.rapido,nombre:p.nombre,precio:p.precio,categoria:p.categoria,marca:d.marca,stock:p.stock,minimo:p.minimo});
-    $('#direccion').textContent=cfg.direccion+' · '+productos.length+' artículos';
-    if(modo==='cobrar'||modo==='consulta')agregar(prod(p.codigo));
-    cerrarAlta()})
+    productos.push({codigo:p.codigo,barras:d.codigo,rapido:d.rapido,nombre:p.nombre,precio:p.precio,categoria:p.categoria,marca:d.marca,stock:p.stock,minimo:p.minimo,costo:d.costo,margen:d.costo?d.precio/d.costo-1:null,proveedor:d.proveedor});
+    const fin=()=>{$('#direccion').textContent=cfg.direccion+' · '+productos.length+' artículos';
+      if(modo==='cobrar'||modo==='consulta')agregar(prod(p.codigo));cerrarAlta()};
+    if(!(frac&&fracU>1))return fin();
+    b.disabled=true;b.textContent='Creando por unidad…';
+    google.script.run.withSuccessHandler(h=>{b.disabled=false;b.textContent='Guardar';const i=productos.findIndex(x=>x.codigo===h.codigo);if(i>=0)Object.assign(productos[i],h);else productos.push(h);
+        const pq=prod(p.codigo);if(pq)pq.uxp=fracU;fin()})
+      .withFailureHandler(e3=>{b.disabled=false;b.textContent='Guardar';mostrarError('Se guardó el paquete, pero no el producto por unidad: '+((e3&&e3.message)||e3)+'. Hacelo desde Editar producto.');fin()})
+      .fraccionarProducto(pin,p.codigo,fracU,'')})
   .withFailureHandler(e2=>{b.disabled=false;b.textContent='Guardar';$('#prodErr').textContent=(e2&&e2.message)||String(e2);$('#prodErr').hidden=false})
   .crearProducto(pin,d)};
 
