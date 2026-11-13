@@ -25,6 +25,8 @@
 })();
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
 :root{--paper:#f3f5f9;--card:#fff;--ink:#18213a;--muted:#5d6782;--line:#e2e7f0;--azul:#2140c4;--azul-soft:#e6ebfb;--marker:#fff06a;--ok:#137a4a;--ok-soft:#e1f4ea;--bad:#b42335;--bad-soft:#fbe4e7;
 --display:"Bricolage Grotesque",Figtree,system-ui,sans-serif;--body:Figtree,system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
@@ -173,15 +175,19 @@ select:focus{outline:none;border-color:var(--azul);box-shadow:0 0 0 3px var(--az
 .results button[data-c] span{flex:1;align-self:center}.results button[data-c] b{align-self:center}
 .thumb{width:40px;height:40px;object-fit:contain;border-radius:8px;background:#fff;flex:none;margin-right:10px;display:inline-block}
 .ledit{background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}.ledit span{font-size:12px;color:var(--muted);opacity:.7}.ledit:hover{text-decoration:underline}
+img.logo{background:#fff;object-fit:cover;border-radius:50%;width:52px;height:52px;box-shadow:0 1px 4px #0002}
+.results .rrow button[data-pc],.results .rrow button[data-libre]{flex:1;border-top:0}
+.estp{font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:#eef}.estp.eAceptado{background:#e3f4e8;color:#1c7a3d}.estp.eVendido{background:#dde7ff;color:#1d3fa0}.estp.eRechazado{background:#fde4e4;color:#a12}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <div class="logo">M</div>
+    <img class="logo" id="hdrLogo" src="https://julianweiber.github.io/escaner/martino/logo.jpg" alt="Librería Martino" crossorigin="anonymous" onerror="this.outerHTML='<div class=logo>M</div>'">
     <div><h1 id="comercio">Caja</h1><p id="direccion">Cargando productos…</p></div>
     <div class="right">
       <button class="hbtn" id="btnPrecios">Precios</button>
+      <button class="hbtn" id="btnPres">Presupuestos</button>
       <button class="hbtn" id="btnClientes">Clientes</button>
       <button class="hbtn" id="btnProducto">+ Producto</button>
       <button class="hbtn" id="btnVentas">Ventas de hoy</button>
@@ -376,6 +382,45 @@ select:focus{outline:none;border-color:var(--azul);box-shadow:0 0 0 3px var(--az
 </div>
 
 <!-- Precios -->
+<div class="modal" id="presModal" hidden>
+  <div class="box xwide">
+    <div id="presLista">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2>Presupuestos</h2>
+        <span style="display:flex;gap:8px"><button class="btn ghost small" type="button" id="presCerrar">Cerrar</button><button class="btn small" type="button" id="presNuevo">+ Nuevo presupuesto</button></span></div>
+      <div class="bar" style="margin:10px 0"><input id="presQ" autocomplete="off" placeholder="Buscá por cliente o número" style="flex:1;min-width:180px">
+        <select id="presEst"><option value="">Todos los estados</option><option>Pendiente</option><option>Aceptado</option><option>Vendido</option><option>Rechazado</option></select></div>
+      <div style="max-height:60vh;overflow-y:auto"><table class="ptab"><thead><tr><th>N°</th><th>Fecha</th><th>Cliente</th><th class="w1">Total</th><th>Estado</th></tr></thead><tbody id="presBody"></tbody></table></div>
+    </div>
+    <form id="presForm" hidden autocomplete="off">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2 id="presTit">Nuevo presupuesto</h2>
+        <button class="btn ghost small" type="button" id="presVolver">← Volver a la lista</button></div>
+      <div class="row2" style="margin-top:10px">
+        <div><label class="label" for="prCli">Cliente</label><input id="prCli" list="presCliList" placeholder="Nombre (opcional)"><datalist id="presCliList"></datalist></div>
+        <div><label class="label" for="prTel">WhatsApp</label><input id="prTel" inputmode="tel" placeholder="Ej: 11 2345-6789"></div>
+      </div>
+      <div style="margin-top:10px;position:relative"><label class="label" for="prBus">Agregar productos</label>
+        <input id="prBus" autocomplete="off" placeholder="Buscá, escaneá o escribí un producto que no esté cargado y elegilo">
+        <div class="results" id="prRes" hidden style="margin-top:6px"></div></div>
+      <div style="max-height:45vh;overflow-y:auto;margin-top:10px"><table class="ptab"><thead><tr><th>Producto</th><th>Cant.</th><th>Precio</th><th class="w1">Subtotal</th><th></th></tr></thead><tbody id="prItems"></tbody></table></div>
+      <div class="row2" style="margin-top:10px">
+        <div><label class="label" for="prDesc">Descuento %</label><input id="prDesc" inputmode="numeric" placeholder="0"></div>
+        <div><label class="label" for="prVal">Válido por (días)</label><input id="prVal" inputmode="numeric" placeholder="7"></div>
+        <div><label class="label" for="prEst">Estado</label><select id="prEst"><option>Pendiente</option><option>Aceptado</option><option>Vendido</option><option>Rechazado</option></select></div>
+      </div>
+      <div style="margin-top:10px"><label class="label" for="prNota">Nota (sale en el presupuesto)</label><input id="prNota" placeholder="Ej: lista 3° grado Colegio San José"></div>
+      <div id="prTot" style="text-align:right;margin:12px 0"></div>
+      <div id="prErr" class="err" hidden></div>
+      <div class="bar" style="justify-content:flex-end;margin-top:10px">
+        <button class="btn ghost small" type="button" id="prBorrar" style="color:var(--bad)">Borrar</button>
+        <button class="btn ghost small" type="button" id="prTicket">Imprimir ticket</button>
+        <button class="btn ghost small" type="button" id="prPdf">Descargar PDF</button>
+        <button class="btn ghost small" type="button" id="prWa">Enviar por WhatsApp</button>
+        <button class="btn ghost small" type="button" id="prCaja">Pasar a la caja</button>
+        <button class="btn small" type="submit" id="prGuardar">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
 <div class="modal" id="precModal" hidden>
   <div class="box xwide">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2>Precios</h2>
@@ -566,13 +611,14 @@ $('#mCobrar').onclick=()=>setModo('cobrar');$('#mConsulta').onclick=()=>setModo(
 $('#cobrar').onclick=()=>{if(ocupado)return;ocupado=true;render();
   google.script.run.withSuccessHandler(v=>{ocupado=false;
     if(v.cliente){const c=clientes.find(x=>x.nombre===v.cliente);if(c){c.fiado+=v.total;v.deuda=c.fiado}}
+    if(presVenta){const idp=presVenta;presVenta=null;google.script.run.withSuccessHandler(()=>{const x=presupuestos.find(q=>q.id===idp);if(x){x.estado='Vendido';x.venta=v.id}}).estadoPresupuesto(pin,idp,'Vendido',v.id)}
     mostrarTicket(v);if($('#autoImp').checked)setTimeout(()=>$('#imprimir').click(),300);carrito.forEach(c=>{const p=prod(c.codigo);p.stock-=c.cantidad});carrito=[];$('#paga').value='';$('#extraPct').value='';$('#extraTipo').value='-1';$('#facturar').checked=false;
     if(medio==='Fiado'){medio='Efectivo';cliente=null}
     if(editando){editando=null;cargar();if(v.avisoReemplazo)mostrarError(v.avisoReemplazo)}
     render();resumen()})
   .withFailureHandler(e=>{ocupado=false;render();mostrarError(e)})
   .registrarVenta({pin:pin,items:carrito,medio:medio,cliente:cliente?cliente.nombre:'',facturar:$('#facturar').checked,reemplaza:editando||'',extra:extra()})};
-$('#editCancelar').onclick=()=>{editando=null;carrito=[];medio='Efectivo';cliente=null;dibujarCliente();render();scan.focus()};
+$('#editCancelar').onclick=()=>{editando=null;presVenta=null;carrito=[];medio='Efectivo';cliente=null;dibujarCliente();render();scan.focus()};
 
 function mostrarTicket(v){const f=v.factura,fecha=new Date(v.fecha).toLocaleString('es-AR');
   $('#ticket').innerHTML=`<h2>${cfg.comercio}</h2><div class="c">${cfg.direccion}<br>WhatsApp ${cfg.whatsapp||''}<br>Instagram ${cfg.instagram||''}</div><hr>
@@ -596,6 +642,7 @@ document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(!$('#prodM
   if(!$('#modal').hidden){$('#modal').hidden=true;return}
   if(!$('#barModal').hidden){$('#barModal').hidden=true;scan.focus();return}
   if(!$('#spModal').hidden){$('#spModal').hidden=true;scan.focus();return}
+  if(!$('#presModal').hidden){if(!$('#prRes').hidden){$('#prRes').hidden=true;return}$('#presModal').hidden=true;scan.focus();return}
   if(!$('#precModal').hidden){cerrarPrecios();return}
   ['#celModal','#ventasModal','#cierreModal','#cliModal'].forEach(s=>$(s).hidden=true);scan.focus()});
 
@@ -658,6 +705,128 @@ $('#prodForm').onsubmit=e=>{e.preventDefault();
       .fraccionarProducto(pin,p.codigo,fracU,fracMargen(num($('#pFracP').value),fracU,d.costo))})
   .withFailureHandler(e2=>{b.disabled=false;b.textContent='Guardar';$('#prodErr').textContent=(e2&&e2.message)||String(e2);$('#prodErr').hidden=false})
   .crearProducto(pin,d)};
+
+/* ---------- Presupuestos ---------- */
+let presupuestos=[],presAct=null,presVenta=null,logoData=null;
+const nroP=n=>'P-'+String(n||0).padStart(4,'0');
+const fechaCorta=s=>{const d=s?new Date(s):new Date();return isNaN(d)?'':d.toLocaleDateString('es-AR')};
+const vencidoP=p=>p.estado==='Pendiente'&&p.validez>0&&Date.now()>new Date(p.fecha).getTime()+p.validez*864e5;
+const subP=p=>p.items.reduce((s,i)=>s+i.precio*i.cantidad,0);
+const totP=p=>Math.round(subP(p)*(1-(p.descuento||0)/100));
+const efP=p=>{const pe=pctMedio('Efectivo');return pe?Math.round(totP(p)*(1+pe/100)):0};
+const pctTxt=p=>(p>0?'+':'-')+Math.abs(p)+'%';
+const errP=t=>{$('#prErr').textContent=t;$('#prErr').hidden=false};
+$('#btnPres').onclick=()=>{$('#presModal').hidden=false;verListaP();cargarPres()};
+function cargarPres(){$('#presBody').innerHTML='<tr><td colspan="5" class="sub">Cargando…</td></tr>';
+  google.script.run.withSuccessHandler(l=>{presupuestos=l;dibujarPres()}).withFailureHandler(mostrarError).listarPresupuestos(pin)}
+function dibujarPres(){const q=sinTildes($('#presQ').value.trim()),e=$('#presEst').value;
+  const l=presupuestos.filter(p=>(!e||p.estado===e)&&(!q||sinTildes(p.cliente+' '+nroP(p.numero)+' '+p.numero).includes(q)));
+  $('#presBody').innerHTML=l.length?l.map(p=>`<tr data-p="${esc(p.id)}" style="cursor:pointer"><td><b>${nroP(p.numero)}</b></td><td>${fechaCorta(p.fecha)}</td><td>${esc(p.cliente||'—')}</td><td class="w1">${ars(p.total)}</td><td><span class="estp e${esc(p.estado)}">${esc(p.estado)}</span>${vencidoP(p)?' <small style="color:var(--bad)">vencido</small>':''}</td></tr>`).join('')
+    :'<tr><td colspan="5" class="sub">'+(presupuestos.length?'No hay presupuestos con ese filtro.':'Todavía no hay presupuestos. Tocá "+ Nuevo presupuesto".')+'</td></tr>'}
+$('#presQ').oninput=dibujarPres;$('#presEst').onchange=dibujarPres;
+$('#presBody').onclick=e=>{const tr=e.target.closest('[data-p]');if(tr)abrirPres(presupuestos.find(p=>p.id===tr.dataset.p))};
+$('#presNuevo').onclick=()=>abrirPres(null);
+$('#presCerrar').onclick=()=>{$('#presModal').hidden=true;scan.focus()};
+$('#presVolver').onclick=()=>verListaP();
+function verListaP(){$('#presLista').hidden=false;$('#presForm').hidden=true;dibujarPres()}
+function abrirPres(p){presAct=p?JSON.parse(JSON.stringify(p)):{id:'',numero:0,fecha:'',cliente:'',telefono:'',estado:'Pendiente',validez:7,descuento:0,nota:'',items:[]};
+  $('#presTit').textContent=p?'Presupuesto '+nroP(p.numero):'Nuevo presupuesto';
+  $('#prCli').value=presAct.cliente;$('#prTel').value=presAct.telefono;$('#prDesc').value=presAct.descuento||'';$('#prVal').value=presAct.validez||'';
+  $('#prEst').value=presAct.estado;$('#prNota').value=presAct.nota;$('#prBorrar').hidden=!p;
+  $('#presCliList').innerHTML=clientes.map(c=>`<option value="${esc(c.nombre)}">`).join('');
+  $('#prErr').hidden=true;$('#prBus').value='';$('#prRes').hidden=true;
+  $('#presLista').hidden=true;$('#presForm').hidden=false;dibujarItemsP();(p?$('#prBus'):$('#prCli')).focus()}
+$('#prCli').onchange=()=>{const c=clientes.find(x=>x.nombre===$('#prCli').value.trim());if(c&&c.telefono&&!$('#prTel').value)$('#prTel').value=c.telefono};
+function leerFormP(){const p=presAct;p.cliente=$('#prCli').value.trim();p.telefono=$('#prTel').value.trim();p.descuento=Math.min(100,num($('#prDesc').value));
+  p.validez=num($('#prVal').value);p.estado=$('#prEst').value;p.nota=$('#prNota').value.trim();return p}
+function dibujarItemsP(){const p=presAct;
+  $('#prItems').innerHTML=p.items.length?p.items.map((i,k)=>`<tr><td>${esc(i.nombre)}${i.codigo?'':' <small class="sub">(no cargado)</small>'}</td><td><input class="prc" data-k="${k}" value="${i.cantidad}" inputmode="numeric" style="width:60px"></td><td><input class="prp" data-k="${k}" value="${i.precio||''}" inputmode="numeric" placeholder="$" style="width:95px"></td><td class="w1">${ars(i.precio*i.cantidad)}</td><td><button type="button" class="btn ghost small" data-del="${k}" title="Quitar">✕</button></td></tr>`).join('')
+    :'<tr><td colspan="5" class="sub">Buscá productos arriba para agregarlos.</td></tr>';totalesP()}
+function totalesP(){const p=leerFormP(),s=subP(p),t=totP(p),ef=efP(p);
+  $('#prTot').innerHTML=(p.descuento?`<span class="sub">Subtotal ${ars(s)} · Descuento ${p.descuento}%: -${ars(s-t)}</span><br>`:'')+`<b style="font-size:22px">Total ${ars(t)}</b>`+(ef&&p.items.length?`<br><span class="sub">Pagando en efectivo: ${ars(ef)} (${pctTxt(pctMedio('Efectivo'))})</span>`:'')}
+$('#prItems').addEventListener('input',e=>{const k=e.target.dataset.k;if(k==null)return;const i=presAct.items[k];
+  if(e.target.classList.contains('prc'))i.cantidad=num(e.target.value);else i.precio=num(e.target.value);
+  e.target.closest('tr').children[3].textContent=ars(i.precio*i.cantidad);totalesP()});
+$('#prItems').addEventListener('click',e=>{const b=e.target.closest('[data-del]');if(!b)return;presAct.items.splice(+b.dataset.del,1);dibujarItemsP()});
+['#prDesc','#prVal'].forEach(s=>$(s).addEventListener('input',totalesP));
+function agregarP(p){if(!p)return;const it=presAct.items.find(i=>i.codigo&&i.codigo===p.codigo);if(it)it.cantidad++;else presAct.items.push({codigo:p.codigo,nombre:p.nombre,cantidad:1,precio:Math.round(p.precio||0)});
+  $('#prBus').value='';$('#prRes').hidden=true;dibujarItemsP();$('#prBus').focus()}
+$('#prBus').addEventListener('input',()=>{const q=$('#prBus').value.trim(),box=$('#prRes');if(q.length<2){box.hidden=true;return}
+  const r=buscar(q).slice(0,30);
+  box.innerHTML=r.map(p=>`<div class="rrow"><button type="button" data-pc="${esc(p.codigo)}"><span>${esc(p.nombre)}</span><b>${p.precio>0?ars(p.precio):'sin precio'}</b></button></div>`).join('')
+    +`<div class="rrow"><button type="button" data-libre="1" style="color:var(--azul);font-weight:700"><span>+ Agregar "${esc(q)}" (no está cargado)</span><b></b></button></div>`;box.hidden=false});
+$('#prBus').addEventListener('keydown',e=>{if(e.key!=='Enter')return;e.preventDefault();const q=$('#prBus').value.trim();if(!q)return;const ex=porCodigo(q);const r=ex?[ex]:buscar(q);if(r.length)agregarP(r[0])});
+$('#prRes').onclick=e=>{const b=e.target.closest('[data-pc]');if(b)return agregarP(prod(b.dataset.pc));
+  if(e.target.closest('[data-libre]')){presAct.items.push({codigo:'',nombre:$('#prBus').value.trim(),cantidad:1,precio:0});$('#prBus').value='';$('#prRes').hidden=true;dibujarItemsP();
+    const ins=$('#prItems').querySelectorAll('input.prp');if(ins.length)ins[ins.length-1].focus()}};
+function guardarP(cb){const p=leerFormP(),b=$('#prGuardar');
+  if(!p.items.length)return errP('Agregá al menos un producto.');
+  if(p.items.some(i=>!(i.precio>0)))return errP('Hay productos sin precio: completalo en la tabla.');
+  $('#prErr').hidden=true;b.disabled=true;b.textContent='Guardando…';
+  google.script.run.withSuccessHandler(r=>{b.disabled=false;b.textContent='Guardar';Object.assign(p,r);
+      const copia=JSON.parse(JSON.stringify(p)),i=presupuestos.findIndex(x=>x.id===p.id);if(i>=0)presupuestos[i]=copia;else presupuestos.unshift(copia);
+      $('#presTit').textContent='Presupuesto '+nroP(p.numero);$('#prBorrar').hidden=false;if(cb)cb(p);else verListaP()})
+    .withFailureHandler(e=>{b.disabled=false;b.textContent='Guardar';errP((e&&e.message)||String(e))})
+    .guardarPresupuesto(pin,p)}
+$('#presForm').onsubmit=e=>{e.preventDefault();guardarP()};
+$('#prBorrar').onclick=()=>{const p=presAct;if(!p.id||!confirm('¿Borrar el presupuesto '+nroP(p.numero)+'? No se puede deshacer.'))return;
+  google.script.run.withSuccessHandler(()=>{presupuestos=presupuestos.filter(x=>x.id!==p.id);verListaP()}).withFailureHandler(e=>errP((e&&e.message)||String(e))).borrarPresupuesto(pin,p.id)};
+/* Imprimir en la ticketera */
+$('#prTicket').onclick=()=>guardarP(p=>{let d=$('#imp');if(!d){d=document.createElement('div');d.id='imp';d.className='tk';document.body.appendChild(d)}
+  const ef=efP(p);
+  d.innerHTML=`<h2 style="text-align:center;margin:0">${esc(cfg.comercio)}</h2><p style="text-align:center;margin:4px 0">${esc(cfg.direccion||'')}<br>WhatsApp ${esc(cfg.whatsapp||'')} · ${esc(cfg.instagram||'')}</p><hr>`
+    +`<b>PRESUPUESTO ${nroP(p.numero)}</b><br>${fechaCorta(p.fecha)}${p.cliente?'<br>Cliente: '+esc(p.cliente):''}<hr>`
+    +p.items.map(i=>`<div>${esc(i.nombre)}</div><div style="display:flex;justify-content:space-between"><span>${i.cantidad} x ${ars(i.precio)}</span><span>${ars(i.precio*i.cantidad)}</span></div>`).join('')
+    +`<hr>${p.descuento?`<div style="display:flex;justify-content:space-between"><span>Descuento ${p.descuento}%</span><span>-${ars(subP(p)-totP(p))}</span></div>`:''}`
+    +`<div class="tot" style="display:flex;justify-content:space-between"><b>TOTAL</b><b>${ars(totP(p))}</b></div>${ef?`<div style="display:flex;justify-content:space-between"><span>En efectivo</span><span>${ars(ef)}</span></div>`:''}`
+    +`${p.nota?'<p>'+esc(p.nota)+'</p>':''}<p style="text-align:center">${p.validez?'Válido por '+p.validez+' días<br>':''}No válido como factura</p>`;
+  document.body.classList.add('imp');window.print();setTimeout(()=>document.body.classList.remove('imp'),1000)});
+/* PDF con el logo */
+function logoP(){if(logoData)return Promise.resolve(logoData);const img=$('#hdrLogo');if(!img||!img.src)return Promise.resolve(null);
+  return fetch(img.src).then(r=>r.blob()).then(b=>new Promise(ok=>{const f=new FileReader();f.onload=()=>ok(logoData=f.result);f.readAsDataURL(b)})).catch(()=>null)}
+async function pdfP(p){if(!window.jspdf)throw new Error('No cargó el generador de PDF. Revisá internet y recargá la página.');
+  const d=new window.jspdf.jsPDF({unit:'mm',format:'a4'}),W=210,lg=await logoP();
+  if(lg)d.addImage(lg,lg.indexOf('image/png')>0?'PNG':'JPEG',15,10,34,34);
+  d.setFont('helvetica','bold');d.setFontSize(20);d.setTextColor(24,40,82);d.text('PRESUPUESTO',W-15,20,{align:'right'});
+  d.setFontSize(12);d.text(nroP(p.numero),W-15,27,{align:'right'});
+  d.setFont('helvetica','normal');d.setFontSize(10);d.setTextColor(60);
+  d.text('Fecha: '+fechaCorta(p.fecha)+(p.validez?'   ·   Válido por '+p.validez+' días':''),W-15,34,{align:'right'});
+  d.setTextColor(30);d.setFont('helvetica','bold');d.setFontSize(13);d.text(cfg.comercio||'',lg?54:15,20);
+  d.setFont('helvetica','normal');d.setFontSize(10);d.text([cfg.direccion||'','WhatsApp '+(cfg.whatsapp||''),cfg.instagram||''],lg?54:15,26);
+  let y=52;if(p.cliente||p.telefono){d.setFont('helvetica','bold');d.text('Cliente:',15,y);d.setFont('helvetica','normal');d.text([p.cliente,p.telefono].filter(Boolean).join('  ·  '),32,y);y+=4}
+  d.autoTable({startY:y+2,head:[['Producto','Cant.','Precio','Subtotal']],body:p.items.map(i=>[i.nombre,String(i.cantidad),ars(i.precio),ars(i.precio*i.cantidad)]),
+    styles:{fontSize:10,cellPadding:2.2},headStyles:{fillColor:[24,40,82]},alternateRowStyles:{fillColor:[247,244,236]},
+    columnStyles:{1:{halign:'center',cellWidth:16},2:{halign:'right',cellWidth:28},3:{halign:'right',cellWidth:30}},margin:{left:15,right:15}});
+  y=d.lastAutoTable.finalY+8;const s=subP(p),t=totP(p),ef=efP(p);d.setFontSize(11);d.setTextColor(60);
+  if(p.descuento){d.text('Subtotal '+ars(s),W-15,y,{align:'right'});y+=6;d.text('Descuento '+p.descuento+'%: -'+ars(s-t),W-15,y,{align:'right'});y+=7}
+  d.setFont('helvetica','bold');d.setFontSize(15);d.setTextColor(24,40,82);d.text('TOTAL '+ars(t),W-15,y,{align:'right'});y+=7;
+  d.setFont('helvetica','normal');d.setFontSize(10);d.setTextColor(60);if(ef){d.text('Pagando en efectivo: '+ars(ef)+' ('+pctTxt(pctMedio('Efectivo'))+')',W-15,y,{align:'right'});y+=6}
+  if(p.nota){y+=4;d.setTextColor(30);d.text(d.splitTextToSize('Nota: '+p.nota,180),15,y)}
+  d.setFontSize(9);d.setTextColor(130);d.text('Precios sujetos a disponibilidad de stock'+(p.validez?' y válidos por '+p.validez+' días':'')+'. ¡Gracias por elegirnos!',W/2,287,{align:'center'});
+  return d}
+const nombrePdf=p=>(nroP(p.numero)+' '+(p.cliente||cfg.comercio||'')).trim().replace(/[\\/:*?"<>|]/g,'')+'.pdf';
+$('#prPdf').onclick=()=>guardarP(p=>pdfP(p).then(d=>d.save(nombrePdf(p))).catch(e=>errP(e.message||String(e))));
+/* WhatsApp: en el celu comparte el PDF; en la compu baja el PDF y abre WhatsApp con el resumen */
+function textoP(p){const ef=efP(p);
+  return `*${cfg.comercio}* · Presupuesto ${nroP(p.numero)}\n`+(p.cliente?`Para: ${p.cliente}\n`:'')+'\n'
+    +p.items.map(i=>`• ${i.cantidad} x ${i.nombre}: ${ars(i.precio*i.cantidad)}`).join('\n')
+    +(p.descuento?`\nDescuento ${p.descuento}%`:'')+`\n\n*Total: ${ars(totP(p))}*`+(ef?` (en efectivo ${ars(ef)})`:'')
+    +(p.validez?`\nVálido por ${p.validez} días.`:'')+(p.nota?`\n${p.nota}`:'')}
+function telWa(t){let d=String(t||'').replace(/\D/g,'');if(!d)return'';if(d.startsWith('0'))d=d.slice(1);if(d.startsWith('54'))return d;if(d.length===8)d='11'+d;return d.length===10?'549'+d:d}
+$('#prWa').onclick=()=>guardarP(async p=>{const txt=textoP(p);
+  try{const d=await pdfP(p),f=new File([d.output('blob')],nombrePdf(p),{type:'application/pdf'});
+    if(navigator.canShare&&navigator.canShare({files:[f]})&&/Android|iPhone|iPad/i.test(navigator.userAgent)){await navigator.share({files:[f],text:txt});return}
+    d.save(nombrePdf(p))}catch(e){if(e&&e.name==='AbortError')return}
+  const tel=telWa(p.telefono),base='https:'+String.fromCharCode(47,47)+(tel?'wa.me/'+tel:'wa.me/');
+  window.open(base+'?text='+encodeURIComponent(txt),'_blank')});
+/* Pasar a la caja */
+$('#prCaja').onclick=()=>guardarP(p=>{const ok=p.items.filter(i=>i.codigo&&prod(i.codigo)),fuera=p.items.filter(i=>!(i.codigo&&prod(i.codigo)));
+  if(!ok.length)return errP('Ningún producto de este presupuesto está cargado en la caja.');
+  if(carrito.length&&!confirm('El ticket actual tiene productos. ¿Reemplazarlo por el presupuesto?'))return;
+  carrito=ok.map(i=>({codigo:i.codigo,cantidad:i.cantidad,precio:i.precio!==Math.round(prod(i.codigo).precio||0)?i.precio:0}));
+  $('#extraTipo').value='-1';$('#extraPct').value=p.descuento||'';presVenta=p.id;
+  $('#presModal').hidden=true;setModo('cobrar');render();
+  if(fuera.length)mostrarError('No pasaron a la caja (no están cargados): '+fuera.map(i=>i.nombre).join(', '))});
 
 /* ---------- Ventas de hoy y anulación ---------- */
 let ventasHoy=[];
