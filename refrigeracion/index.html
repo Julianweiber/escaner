@@ -8,7 +8,7 @@
 <script>
 /* Reemplazo de google.script.run: la página vive en GitHub Pages y llama al Apps Script por POST. */
 (function(){
-  var API=(new URLSearchParams(location.search).get('api'))||'PEGAR_URL_APPS_SCRIPT';
+  var API=(new URLSearchParams(location.search).get('api'))||'https:'+String.fromCharCode(47,47)+'script.google.com/macros/s/AKfycbzVeJlSGQVYQihPymT2ySQMVlYVDis4Umv_Ts0YCcPmZt_qyV_Zrjf8Yr0yOU_6G8vA/exec';
   function runner(ok,fail){
     return new Proxy({},{get:function(_,name){
       if(name==='withSuccessHandler')return function(f){return runner(f,fail)};
