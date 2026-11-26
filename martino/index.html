@@ -461,6 +461,7 @@ img.logo{background:#fff;object-fit:cover;border-radius:50%;width:52px;height:52
       <div style="display:flex;justify-content:space-between;align-items:end;gap:10px;flex-wrap:wrap">
         <div><span class="label">Debe</span><div class="deuda" id="clDeuda">$0</div></div>
         <a class="btn ghost small" id="clWa" target="_blank" rel="noopener" style="text-decoration:none">Recordar por WhatsApp</a>
+        <button class="btn ghost small" type="button" id="clPdf">Compartir PDF de la cuenta</button>
       </div>
       <div class="bar"><input id="clTel" inputmode="tel" placeholder="Teléfono"><button class="btn ghost small" id="clTelOk">Guardar teléfono</button></div>
       <div class="fiado">
@@ -1079,9 +1080,34 @@ function verCliente(c){clActual=c;$('#clTit').textContent=c.nombre;$('#clVolver'
   $('#clDeuda').textContent=ars(Math.max(0,c.fiado));$('#clDeuda').style.color=c.fiado>0?'var(--bad)':'var(--ok)';
   $('#clTel').value=c.telefono||'';const w=waLink(c);$('#clWa').hidden=!(w&&c.fiado>0);$('#clWa').href=w||'#';
   $('#cpImporte').value=c.fiado>0?Math.round(c.fiado):'';$('#cpNota').value='';dibujarMediosPago();
-  $('#clMovs').innerHTML='<div class="empty">Cargando…</div>';
-  google.script.run.withSuccessHandler(m=>{$('#clMovs').innerHTML=m.length?m.map(x=>`<div class="mov ${x.tipo}"><span><small class="sub">${x.fechaTexto}</small><br>${x.tipo==='pago'?'Pagó · ':'Fiado · '}${esc(x.detalle)}</span><b>${x.tipo==='pago'?'−':'+'}${ars(x.importe)}</b></div>`).join(''):'<div class="empty">Sin movimientos.</div>'})
+  $('#clMovs').innerHTML='<div class="empty">Cargando…</div>';clMovsData=[];
+  google.script.run.withSuccessHandler(m=>{clMovsData=m;$('#clMovs').innerHTML=m.length?m.map(x=>`<div class="mov ${x.tipo}"><span><small class="sub">${x.fechaTexto}</small><br>${x.tipo==='pago'?'Pagó · ':'Fiado · '}${esc(x.detalle)}</span><b>${x.tipo==='pago'?'−':'+'}${ars(x.importe)}</b></div>`).join(''):'<div class="empty">Sin movimientos.</div>'})
     .withFailureHandler(mostrarError).clienteDetalle(pin,c.nombre)}
+/* PDF de la cuenta del cliente (fiado) */
+let clMovsData=[];
+async function pdfDeuda(c,movs){if(!window.jspdf)throw new Error('No cargó el generador de PDF. Revisá internet y recargá la página.');
+  const d=new window.jspdf.jsPDF({unit:'mm',format:'a4'}),W=210,lg=await logoP();
+  if(lg)d.addImage(lg,lg.indexOf('image/png')>0?'PNG':'JPEG',15,10,34,34);
+  d.setFont('helvetica','bold');d.setFontSize(18);d.setTextColor(24,40,82);d.text('ESTADO DE CUENTA',W-15,20,{align:'right'});
+  d.setFont('helvetica','normal');d.setFontSize(10);d.setTextColor(60);d.text('Al '+new Date().toLocaleDateString('es-AR'),W-15,27,{align:'right'});
+  d.setTextColor(30);d.setFont('helvetica','bold');d.setFontSize(13);d.text(cfg.comercio||'',lg?54:15,20);
+  d.setFont('helvetica','normal');d.setFontSize(10);d.text([cfg.direccion||'','WhatsApp '+(cfg.whatsapp||''),cfg.instagram||''],lg?54:15,26);
+  d.setFont('helvetica','bold');d.text('Cliente:',15,52);d.setFont('helvetica','normal');d.text([c.nombre,c.telefono].filter(Boolean).join('  ·  '),32,52);
+  const filas=movs.slice().reverse().map(x=>[x.fechaTexto,x.tipo==='pago'?'Pago':'Compra',String(x.detalle||''),(x.tipo==='pago'?'-':'')+ars(x.importe)]);
+  d.autoTable({startY:58,head:[['Fecha','Tipo','Detalle','Importe']],body:filas.length?filas:[['','','Sin movimientos','']],
+    styles:{fontSize:9.5,cellPadding:2},headStyles:{fillColor:[24,40,82]},alternateRowStyles:{fillColor:[247,244,236]},
+    columnStyles:{0:{cellWidth:30},1:{cellWidth:18},3:{halign:'right',cellWidth:28}},margin:{left:15,right:15}});
+  let y=d.lastAutoTable.finalY+10;d.setFont('helvetica','bold');d.setFontSize(15);d.setTextColor(c.fiado>0?170:30,c.fiado>0?30:120,40);
+  d.text((c.fiado>0?'SALDO A PAGAR ':'SIN DEUDA ')+(c.fiado>0?ars(c.fiado):''),W-15,y,{align:'right'});
+  d.setFont('helvetica','normal');d.setFontSize(9);d.setTextColor(130);d.text('¡Gracias por elegirnos! Ante cualquier duda escribinos por WhatsApp.',W/2,287,{align:'center'});
+  return d}
+$('#clPdf').onclick=async()=>{const c=clActual,b=$('#clPdf');if(!c)return;b.disabled=true;b.textContent='Armando PDF…';
+  try{const d=await pdfDeuda(c,clMovsData),nom=('Cuenta '+c.nombre).replace(/[\\/:*?"<>|]/g,'')+'.pdf',f=new File([d.output('blob')],nom,{type:'application/pdf'});
+    const txt=`Hola ${c.nombre}! Te paso el detalle de tu cuenta en ${cfg.comercio}.`+(c.fiado>0?` Saldo: ${ars(c.fiado)}.`:'');
+    if(navigator.canShare&&navigator.canShare({files:[f]})&&/Android|iPhone|iPad/i.test(navigator.userAgent)){await navigator.share({files:[f],text:txt})}
+    else{d.save(nom);const tel=telWa(c.telefono);window.open('https:'+String.fromCharCode(47,47)+'wa.me/'+(tel||'')+'?text='+encodeURIComponent(txt+' (te adjunto el PDF)'),'_blank')}}
+  catch(e){if(!(e&&e.name==='AbortError'))mostrarError(e)}
+  b.disabled=false;b.textContent='Compartir PDF de la cuenta'};
 function dibujarMediosPago(){$('#cpMedios').innerHTML=MEDIOS.filter(m=>m!=='Fiado').map(m=>`<button class="chip ${m===cpMedio?'on':''}" data-m="${m}">${m}</button>`).join('')}
 $('#cpMedios').onclick=e=>{const b=e.target.closest('[data-m]');if(b){cpMedio=b.dataset.m;dibujarMediosPago()}};
 $('#clTelOk').onclick=()=>{const c=clActual,t=$('#clTel').value.trim(),b=$('#clTelOk');b.disabled=true;
